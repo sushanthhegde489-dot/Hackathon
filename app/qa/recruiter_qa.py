@@ -101,30 +101,22 @@ class RecruiterQAEngine:
         return None
 
     def get_suggested_questions(self) -> List[str]:
-        """Returns 6 curated example questions relevant to the current shortlist."""
+        """Returns 4 curated high-value recruiter questions."""
         if not self.results:
             return []
 
         c1 = self.results[0]
-        c2 = self.results[1] if len(self.results) > 1 else None
         c4 = self.results[3] if len(self.results) > 3 else None
 
-        questions = []
-        if c1 and c2:
-            questions.append(f"Why did {c1.resume.candidate_name} rank above {c2.resume.candidate_name}?")
-        if c4:
-            questions.append(f"Why is {c4.resume.candidate_name} not in the top 3?")
+        c1_label = f" ({c1.resume.candidate_name})" if c1 else ""
+        c4_label = f" ({c4.resume.candidate_name})" if c4 else ""
 
-        # Check required skills for specific query
-        if self.jd.required_skills:
-            target_skill = self.jd.required_skills[0].title()
-            questions.append(f"Which candidates are missing {target_skill}?")
-
-        questions.append("Which candidates have no experience penalty?")
-        questions.append("Who has strong semantic alignment despite missing some keywords?")
-        questions.append("Show candidates who match required skills but lack preferred skills.")
-
-        return questions
+        return [
+            f"Why did #1{c1_label} rank above #2?",
+            f"Why is this candidate{c4_label} missing the top 3?",
+            "Who is missing a required skill?",
+            "Why did this candidate lose points?"
+        ]
 
     def answer_query(self, query: str) -> QAResponse:
         """
@@ -568,27 +560,42 @@ class RecruiterQAEngine:
                 return QAResponse(
                     query=query,
                     intent="penalty_reasons",
-                    answer=f"**{candidate.resume.candidate_name}** incurred **no penalties** (0.0)! They meet or exceed the required experience.",
+                    answer=f"**{candidate.resume.candidate_name}** incurred **no penalties** (0.0). They meet or exceed the required experience.",
                     candidates_involved=[candidate.resume.candidate_name]
                 )
 
             gap = pen.details.get("experience_gap_years", 0.0)
+            crit = pen.details.get("missing_critical_penalty", 0.0)
+            items = []
+            if gap > 0:
+                items.append(f"**Experience Gap**: {gap:.1f} years ({candidate.resume.experience_years:.1f} yrs possessed vs {self.jd.experience_years_required:.1f} yrs required)")
+            if crit > 0:
+                items.append(f"**Missing Critical Requirements**: -{crit:.3f} penalty")
+
             answer = (
                 f"### Deduction Details for **{candidate.resume.candidate_name}**\n\n"
-                f"- **Total Penalty Applied**: `-{pen.total_penalty:.4f}`\n"
-                f"- **Experience Gap**: {gap:.1f} years ({candidate.resume.experience_years:.1f} yrs possessed vs {self.jd.experience_years_required:.1f} yrs required)\n"
-                f"- **Penalty Rate**: 5% per missing year (capped at 20% max)\n"
-                f"- **Impact on Ranking**: Reduced base score from {candidate.diagnostics.base_score:.4f} to final score {candidate.final_score:.4f}."
+                f"- **Total Penalty Applied**: `-{pen.total_penalty:.4f}`\n- "
+                + "\n- ".join(items)
+                + f"\n- **Impact on Ranking**: Reduced base score from {candidate.diagnostics.base_score:.4f} to final score {candidate.final_score:.4f}."
             )
             return QAResponse(query=query, intent="penalty_reasons", answer=answer, candidates_involved=[candidate.resume.candidate_name])
 
         # Overview of all penalized candidates
         penalized = [c for c in self.results if c.penalties.total_penalty > 0.0]
-        bullets = [
-            f"- **{c.resume.candidate_name}** (#{c.rank}): -{c.penalties.total_penalty:.3f} penalty "
-            f"({c.resume.experience_years:.1f} vs {self.jd.experience_years_required:.1f} yrs required)"
-            for c in penalized[:8]
-        ]
+        bullets = []
+        for c in penalized[:8]:
+            details = c.penalties.details
+            gap_val = details.get("experience_gap_years", 0.0)
+            crit_val = details.get("missing_critical_penalty", 0.0)
+            reason_parts = []
+            if gap_val > 0:
+                reason_parts.append(f"{gap_val:.1f} yr experience deficit")
+            if crit_val > 0:
+                reason_parts.append("missing critical requirements")
+            reason_str = ", ".join(reason_parts) if reason_parts else "calibrated deduction"
+            bullets.append(
+                f"- **{c.resume.candidate_name}** (#{c.rank}): -{c.penalties.total_penalty:.3f} penalty ({reason_str})"
+            )
         answer = (
             f"### Overview: Candidates with Experience Deductions ({len(penalized)} candidates)\n\n"
             + "\n".join(bullets)

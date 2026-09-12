@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 PRESET_CONFIGS: Dict[str, Dict[str, Any]] = {
-    "Recommended (Balanced - 40% KW / 60% Sem)": {
+    "Recommended": {
         "keyword_weight": 0.40,
         "semantic_weight": 0.60,
         "required_skill_weight": 0.70,
@@ -28,9 +28,10 @@ PRESET_CONFIGS: Dict[str, Dict[str, Any]] = {
         "semantic_noise_threshold": 0.18,
         "experience_penalty_per_year": 0.05,
         "maximum_experience_penalty": 0.20,
-        "description": "Audited optimal default. Balances explicit canonical skill requirements with contextual project alignment, resisting keyword stuffing while rewarding verified skills."
+        "weights_label": "40% Keyword / 60% Semantic",
+        "description": "Balanced matching that gives semantic evidence slightly more influence than exact skill overlap."
     },
-    "Skills-First (Context Dominant - 25% KW / 75% Sem)": {
+    "Skills-first": {
         "keyword_weight": 0.25,
         "semantic_weight": 0.75,
         "required_skill_weight": 0.70,
@@ -38,9 +39,10 @@ PRESET_CONFIGS: Dict[str, Dict[str, Any]] = {
         "semantic_noise_threshold": 0.18,
         "experience_penalty_per_year": 0.05,
         "maximum_experience_penalty": 0.20,
-        "description": "Heavily prioritizes semantic understanding of project narratives, architectures, and problem-solving depth over literal keyword repetition."
+        "weights_label": "25% Keyword / 75% Semantic",
+        "description": "Prioritizes project depth and semantic alignment over exact keyword matches."
     },
-    "Strict Compliance (High Keyword - 60% KW / 40% Sem) ⚠️": {
+    "Strict compliance": {
         "keyword_weight": 0.60,
         "semantic_weight": 0.40,
         "required_skill_weight": 0.70,
@@ -48,9 +50,10 @@ PRESET_CONFIGS: Dict[str, Dict[str, Any]] = {
         "semantic_noise_threshold": 0.18,
         "experience_penalty_per_year": 0.05,
         "maximum_experience_penalty": 0.20,
-        "description": "Enforces strict canonical keyword verification. ⚠️ CAUTION: Vulnerable to keyword-stuffing exploits."
+        "weights_label": "60% Keyword / 40% Semantic",
+        "description": "Prioritizes exact mandatory skills for strict qualification requirements."
     },
-    "Custom Configuration": {
+    "Custom configuration": {
         "keyword_weight": 0.40,
         "semantic_weight": 0.60,
         "required_skill_weight": 0.70,
@@ -58,7 +61,8 @@ PRESET_CONFIGS: Dict[str, Dict[str, Any]] = {
         "semantic_noise_threshold": 0.18,
         "experience_penalty_per_year": 0.05,
         "maximum_experience_penalty": 0.20,
-        "description": "Manually configure all scoring weights and threshold parameters."
+        "weights_label": "Manual Weight Allocation",
+        "description": "Manually adjust scoring weights and calibration parameters below."
     }
 }
 
@@ -71,9 +75,8 @@ def check_keyword_stuffing_warning(keyword_weight: float) -> Tuple[bool, str]:
     """
     if keyword_weight >= KEYWORD_STUFFING_THRESHOLD:
         warning_msg = (
-            f"⚠️ **Adversarial Risk Warning**: Keyword weight is set to {keyword_weight:.2f} (≥ 0.60). "
-            "At this threshold, candidates who pad their resumes with keyword lists can rank above more "
-            "qualified engineers. We recommend keeping Keyword Weight ≤ 0.50 for balanced ranking."
+            f"Adversarial Risk Warning: Keyword weight is {keyword_weight:.2f} (>= 0.60). "
+            "High keyword weights allow keyword-stuffed resumes to outrank qualified candidates."
         )
         return True, warning_msg
     return False, ""

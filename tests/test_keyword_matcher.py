@@ -175,6 +175,8 @@ class TestKeywordMatcherFalsePositives:
     def test_node_vs_django(self):
         """Ensure unrelated frameworks do not falsely match."""
         jd = JobDescription(
+            filename="jd.pdf",
+            raw_text="",
             title="Backend Dev",
             required_skills=["nodejs"]
         )
