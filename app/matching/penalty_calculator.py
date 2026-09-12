@@ -22,7 +22,8 @@ class PenaltyCalculator:
         cls,
         jd: Optional[JobDescription],
         resume: Optional[Resume],
-        config: Optional[RankingConfig] = None
+        config: Optional[RankingConfig] = None,
+        kw_breakdown: Optional[Any] = None
     ) -> PenaltyBreakdown:
         """
         Calculates penalty deductions based on structured JD and Resume metadata.
@@ -62,7 +63,13 @@ class PenaltyCalculator:
         experience_penalty = min(raw_penalty, cap)
         experience_penalty = max(0.0, min(1.0, experience_penalty))
 
-        total_penalty = round(experience_penalty, 4)
+        # Calculate missing critical skill penalty (0.05 per missing required skill)
+        missing_critical_penalty = 0.0
+        if kw_breakdown and hasattr(kw_breakdown, 'missing_required_skills'):
+            num_missing = len(kw_breakdown.missing_required_skills)
+            missing_critical_penalty = num_missing * 0.05
+
+        total_penalty = round(experience_penalty + missing_critical_penalty, 4)
 
         details = {
             "required_years": round(required_years, 2),
@@ -70,12 +77,13 @@ class PenaltyCalculator:
             "experience_gap_years": round(experience_gap, 2),
             "penalty_rate_per_year": rate,
             "max_penalty_cap": cap,
-            "unclamped_penalty": round(raw_penalty, 4)
+            "unclamped_experience_penalty": round(raw_penalty, 4),
+            "missing_critical_penalty": missing_critical_penalty
         }
 
         return PenaltyBreakdown(
             experience_penalty=round(experience_penalty, 4),
-            missing_critical_penalty=0.0,
+            missing_critical_penalty=missing_critical_penalty,
             details=details,
             total_penalty=total_penalty
         )

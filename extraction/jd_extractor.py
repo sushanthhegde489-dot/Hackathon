@@ -15,23 +15,7 @@ class JDExtractor:
     Retains source snippets, confidence scores, and cue triggers in SkillEvidence.
     """
 
-    # Comprehensive vocabulary of tech skills to search for
-    TECH_SKILLS_VOCAB = [
-        # Languages
-        "python", "javascript", "typescript", "java", "c++", "c#", ".net", "go", "ruby", "php", "swift", "kotlin", "rust",
-        # Frontend
-        "react", "react native", "angular", "vue", "next.js", "svelte", "jquery", "bootstrap", "tailwind", "html", "css",
-        # Backend & Frameworks
-        "node.js", "express", "django", "flask", "fastapi", "spring boot", "laravel", "rails",
-        # Databases & Caching
-        "mongodb", "postgresql", "mysql", "redis", "sqlite", "sql server", "dynamodb",
-        # Cloud & DevOps
-        "aws", "azure", "gcp", "docker", "kubernetes", "git", "ci/cd", "jenkins", "terraform",
-        # APIs & Architecture
-        "rest api", "graphql", "grpc", "microservices",
-        # Methodologies & Tools
-        "agile", "scrum"
-    ]
+    # Moved TECH_SKILLS_VOCAB to SkillNormalizer
 
     # Section header regex patterns
     REQUIRED_SECTION_PATTERN = re.compile(
@@ -156,7 +140,7 @@ class JDExtractor:
         cleaned_text = TextCleaner.clean_text(text)
         found: List[Tuple[str, str]] = []
 
-        for skill in cls.TECH_SKILLS_VOCAB:
+        for skill in SkillNormalizer.TECH_SKILLS_VOCAB:
             skill_cleaned = skill.lower()
             if " " in skill_cleaned:
                 pattern = r"\b" + re.escape(skill_cleaned) + r"\b"

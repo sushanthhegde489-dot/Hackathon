@@ -283,7 +283,8 @@ def generate_leaderboard_csv(results: List[CandidateResult]) -> str:
         "Matched Required Skills",
         "Missing Required Skills",
         "Matched Preferred Skills",
-        "Ranking Rationale"
+        "Ranking Rationale",
+        "Score Formula Used"
     ])
 
     for i, res in enumerate(results, 1):
@@ -303,7 +304,8 @@ def generate_leaderboard_csv(results: List[CandidateResult]) -> str:
             ", ".join(kw.matched_required_skills),
             ", ".join(kw.missing_required_skills),
             ", ".join(kw.matched_preferred_skills),
-            res.ranking_reason
+            res.ranking_reason,
+            f"Final = max(0, min(1, (Keyword * {res.diagnostics.keyword_weight} + Semantic * {res.diagnostics.semantic_weight}) - Penalty))"
         ])
 
     return output.getvalue()

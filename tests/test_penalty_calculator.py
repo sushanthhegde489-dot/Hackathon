@@ -55,7 +55,7 @@ class TestPenaltyCalculator:
 
         pen = PenaltyCalculator.calculate(jd, resume)
         # Raw would be 6 * 0.05 = 0.30, but cap is 0.20
-        assert pen.details["unclamped_penalty"] == 0.30
+        assert pen.details["unclamped_experience_penalty"] == 0.30
         assert pen.experience_penalty == 0.20
         assert pen.total_penalty == 0.20
 

@@ -24,15 +24,7 @@ class ResumeExtractor:
         "summary": re.compile(r"^(?:professional\s+summary|summary|profile|about\s+me|objective)\b", re.IGNORECASE),
     }
 
-    # Common vocabulary of tech skills to search for
-    TECH_SKILLS_VOCAB = [
-        "python", "javascript", "typescript", "java", "c++", "c#", ".net", "go", "ruby", "php", "swift", "kotlin", "rust",
-        "react", "react native", "angular", "vue", "next.js", "svelte", "jquery", "bootstrap", "tailwind", "html", "css",
-        "node.js", "express", "django", "flask", "fastapi", "spring boot", "laravel", "rails",
-        "mongodb", "postgresql", "mysql", "redis", "sqlite", "sql server", "dynamodb",
-        "aws", "azure", "gcp", "docker", "kubernetes", "git", "ci/cd", "jenkins", "terraform",
-        "rest api", "graphql", "grpc", "microservices", "agile", "scrum"
-    ]
+    # Moved TECH_SKILLS_VOCAB to SkillNormalizer
 
     @classmethod
     def extract_name(cls, raw_text: Optional[str], fallback: str = "Unknown Candidate") -> str:
@@ -115,7 +107,7 @@ class ResumeExtractor:
         cleaned_text = TextCleaner.clean_text(raw_text)
         found_skills: List[str] = []
 
-        for skill in cls.TECH_SKILLS_VOCAB:
+        for skill in SkillNormalizer.TECH_SKILLS_VOCAB:
             skill_cleaned = skill.lower()
             if " " in skill_cleaned:
                 pattern = r"\b" + re.escape(skill_cleaned) + r"\b"
@@ -140,21 +132,46 @@ class ResumeExtractor:
         if not raw_text:
             return 0.0
 
+        text = raw_text.lower()
+        explicit_years = 0.0
         patterns = [
             r"(\d+(?:\.\d+)?)\s*(?:to|-)\s*\d+(?:\.\d+)?\s*year[s]?",
             r"(\d+(?:\.\d+)?)\s*(?:\+|-)?\s*year[s]?\s*(?:of\s*)?experience",
             r"experience\s*(?:of\s*)?(?:at\s*least\s*)?(\d+(?:\.\d+)?)\s*year[s]?",
             r"(\d+(?:\.\d+)?)\s*\+\s*years\b"
         ]
-
         for pattern in patterns:
-            matches = re.findall(pattern, raw_text.lower())
+            matches = re.findall(pattern, text)
             if matches:
                 try:
-                    return float(matches[0])
+                    explicit_years = float(matches[0])
+                    break
                 except (ValueError, IndexError):
                     continue
-        return 0.0
+
+        # Look for date ranges like "Jan 2020 - Mar 2023" or "2019 to Present"
+        date_pattern = re.compile(
+            r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)?\s*"
+            r"(20\d{2})\s*(?:-|to|–|—)\s*"
+            r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december|present|current|now)?\s*"
+            r"(20\d{2})?",
+            re.IGNORECASE
+        )
+        
+        parsed_years = 0.0
+        for match in date_pattern.findall(text):
+            start_year_str, end_year_str = match
+            try:
+                start_year = int(start_year_str)
+                end_year = int(end_year_str) if end_year_str else 2024
+                
+                diff = end_year - start_year
+                if 0 < diff < 15:
+                    parsed_years += diff
+            except:
+                continue
+
+        return max(explicit_years, parsed_years)
 
     @classmethod
     def parse_resume(cls, filename: str, raw_text: Optional[str]) -> Resume:

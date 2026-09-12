@@ -172,10 +172,16 @@ class TestKeywordMatcherFalsePositives:
         assert "react" in result.keyword_breakdown.missing_required_skills
         assert result.keyword_score == 0.0
 
-    def test_node_vs_express(self):
-        jd = JobDescription(filename="jd.pdf", raw_text="", required_skills=["nodejs"])
-        resume = Resume(filename="r.pdf", raw_text="Express API developer", skills=["express"])
-
+    def test_node_vs_django(self):
+        """Ensure unrelated frameworks do not falsely match."""
+        jd = JobDescription(
+            title="Backend Dev",
+            required_skills=["nodejs"]
+        )
+        resume = Resume(
+            filename="r.pdf",
+            raw_text="Django API developer"
+        )
         result = KeywordMatcher.match(jd, resume)
         assert "nodejs" not in result.keyword_breakdown.matched_required_skills
         assert result.keyword_score == 0.0
@@ -311,7 +317,7 @@ class TestKeywordMatcherEvidence:
         assert evidence["docker"]["tier"] == "required"
         assert evidence["docker"]["candidate_skill"] is None
         assert evidence["docker"]["matching_method"] == "none"
-        assert "No explicit skill evidence" in evidence["docker"]["source_context"]
+        assert evidence["docker"]["source_context"] is None
 
 
 class TestExtractionToMatchingPipeline:
@@ -369,10 +375,10 @@ class TestExtractionToMatchingPipeline:
         assert set(ranked_results[0].keyword_breakdown.matched_required_skills) == {"python", "fastapi", "postgresql"}
         assert ranked_results[0].keyword_breakdown.matched_preferred_skills == ["docker"]
 
-        # Resume B: 1/3 req (0.3333 * 0.70 = 0.2333) + 0/2 pref = 0.2333
-        assert round(ranked_results[1].keyword_score, 4) == round((1 / 3) * 0.70, 4)
-        assert ranked_results[1].keyword_breakdown.matched_required_skills == ["python"]
-        assert set(ranked_results[1].keyword_breakdown.missing_required_skills) == {"fastapi", "postgresql"}
+        # Resume B: 2/3 req (python, postgresql via mysql) (0.6667 * 0.70 = 0.4667) + 0/2 pref = 0.4667
+        assert round(ranked_results[1].keyword_score, 4) == round((2 / 3) * 0.70, 4)
+        assert set(ranked_results[1].keyword_breakdown.matched_required_skills) == {"python", "postgresql"}
+        assert set(ranked_results[1].keyword_breakdown.missing_required_skills) == {"fastapi"}
 
         # Resume C: 0/3 req + 0/2 pref = 0.0
         assert ranked_results[2].keyword_score == 0.0

@@ -13,6 +13,26 @@ class SkillNormalizer:
     - C != C++ != C#
     """
 
+    # Comprehensive vocabulary of tech skills to search for
+    TECH_SKILLS_VOCAB = [
+        # Languages
+        "python", "javascript", "typescript", "java", "c++", "c#", ".net", "go", "ruby", "php", "swift", "kotlin", "rust",
+        # Frontend
+        "react", "react native", "angular", "vue", "next.js", "svelte", "jquery", "bootstrap", "tailwind", "html", "css",
+        # Backend & Frameworks
+        "node.js", "express", "django", "flask", "fastapi", "spring boot", "laravel", "rails",
+        # Databases & Caching
+        "mongodb", "postgresql", "mysql", "redis", "sqlite", "sql server", "dynamodb", "nosql",
+        # Cloud & DevOps
+        "aws", "azure", "gcp", "docker", "kubernetes", "git", "ci/cd", "jenkins", "terraform",
+        # APIs & Architecture
+        "rest api", "rest", "graphql", "grpc", "microservices", "json",
+        # Testing
+        "jest", "mocha", "chai", "cypress", "selenium", "junit", "pytest",
+        # Methodologies & Tools
+        "agile", "scrum", "jira"
+    ]
+
     # Equivalence mappings to canonical skill identifiers
     SYNONYMS_MAP: Dict[str, str] = {
         # JavaScript / TypeScript
@@ -119,6 +139,38 @@ class SkillNormalizer:
         "bootstrap": "bootstrap",
         "git": "git",
     }
+
+    # The Hackathon specifically requires recognizing that a candidate with "Express"
+    # is relevant for a "Node.js" role, even if "Node.js" is not literally in the resume.
+    # This graph maps a canonical skill to a set of skills that semantically satisfy it.
+    RELATED_SKILLS_GRAPH: Dict[str, Set[str]] = {
+        "nodejs": {"express", "nestjs", "javascript", "typescript", "rest api"},
+        "express": {"nodejs", "javascript", "typescript", "rest api"},
+        "javascript": {"typescript", "react", "nodejs", "express", "angular", "vue"},
+        "typescript": {"javascript", "react", "nodejs", "express", "angular", "vue"},
+        "react": {"nextjs", "javascript", "typescript", "redux"},
+        "mongodb": {"nosql", "dynamodb", "documentdb"},
+        "postgresql": {"sql", "mysql", "mssql", "sqlite"},
+        "mysql": {"sql", "postgresql", "mssql", "sqlite"},
+        "sql": {"postgresql", "mysql", "mssql", "sqlite"},
+        "nosql": {"mongodb", "dynamodb", "redis", "cassandra"},
+        "aws": {"cloud", "azure", "gcp"},
+        "azure": {"cloud", "aws", "gcp"},
+        "gcp": {"cloud", "aws", "azure"},
+        "rest api": {"json", "express", "fastapi", "flask", "django", "spring boot"},
+        "json": {"rest api", "api", "javascript"},
+        "docker": {"kubernetes", "containerization", "ci/cd"},
+        "kubernetes": {"docker", "containerization", "ci/cd"},
+        "ci/cd": {"jenkins", "github actions", "gitlab ci", "docker", "kubernetes"}
+    }
+
+    @classmethod
+    def get_equivalent_skills(cls, canonical_skill: str) -> Set[str]:
+        """Returns a set of skills that are semantically equivalent or strongly imply the canonical skill."""
+        equiv = {canonical_skill}
+        if canonical_skill in cls.RELATED_SKILLS_GRAPH:
+            equiv.update(cls.RELATED_SKILLS_GRAPH[canonical_skill])
+        return equiv
 
     @classmethod
     def normalize(cls, skill: Optional[str]) -> str:

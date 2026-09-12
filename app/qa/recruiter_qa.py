@@ -405,7 +405,7 @@ class RecruiterQAEngine:
         """Identifies which candidates are missing a specified skill."""
         # Find skill name mentioned in query
         target_skill = None
-        for skill in self.jd.all_skills() + JDExtractor.TECH_SKILLS_VOCAB:
+        for skill in self.jd.all_skills() + SkillNormalizer.TECH_SKILLS_VOCAB:
             if re.search(r"\b" + re.escape(skill) + r"\b", query, re.IGNORECASE):
                 target_skill = SkillNormalizer.normalize(skill)
                 break
@@ -464,7 +464,7 @@ class RecruiterQAEngine:
     def _handle_has_skill(self, query: str) -> QAResponse:
         """Finds candidates possessing a specific skill."""
         target_skill = None
-        for skill in self.jd.all_skills() + JDExtractor.TECH_SKILLS_VOCAB:
+        for skill in self.jd.all_skills() + SkillNormalizer.TECH_SKILLS_VOCAB:
             if re.search(r"\b" + re.escape(skill) + r"\b", query, re.IGNORECASE):
                 target_skill = SkillNormalizer.normalize(skill)
                 break

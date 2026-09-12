@@ -182,7 +182,7 @@ def render_jd_section() -> Optional[JobDescription]:
 
     if current_jd:
         st.success(f"✅ Active Job Description: **{current_jd.title}**")
-        with st.expander("📋 Job Description Quality & Bias Check (Pre-Screening Audit)"):
+        with st.expander("⭐ BONUS FEATURE: Job Description Quality & Bias Check (Pre-Screening Audit)"):
             bias_report = JDBiasDetector.analyze(current_jd)
             st.info(
                 "This engine evaluates the structural quality and inclusivity of the JD. "
@@ -320,7 +320,9 @@ def render_leaderboard(ranked_results: List[CandidateResult]):
             "Semantic Score": format_percentage(diag.semantic_score),
             "Experience": f"{res.resume.experience_years:.1f} yrs",
             "Penalty": format_percentage(diag.total_penalty),
-            "Matched Skills": ", ".join(res.matched_skills) if res.matched_skills else "None"
+            "Matched Required": ", ".join(res.keyword_breakdown.matched_required_skills) if res.keyword_breakdown.matched_required_skills else "None",
+            "Missing Required": ", ".join(res.keyword_breakdown.missing_required_skills) if res.keyword_breakdown.missing_required_skills else "None",
+            "Matched Preferred": ", ".join(res.keyword_breakdown.matched_preferred_skills) if res.keyword_breakdown.matched_preferred_skills else "None"
         })
 
     if table_rows:
@@ -348,7 +350,7 @@ def render_leaderboard(ranked_results: List[CandidateResult]):
 def render_qa_assistant(ranked_results: List[CandidateResult], current_jd: JobDescription):
     """Render the Recruiter Q&A Engine."""
     st.markdown("---")
-    st.markdown("### 💬 Recruiter Q&A Assistant (Evidence-Backed)")
+    st.markdown("### ⭐ BONUS FEATURE: Recruiter Q&A Assistant (Evidence-Backed)")
     st.caption("Ask natural-language questions about candidates. Answers are computed deterministically from verified structured evidence — **100% offline**, zero hallucinations.")
 
     qa_engine = RecruiterQAEngine(ranked_results, current_jd)

@@ -119,7 +119,7 @@ class HybridRanker:
         )
 
         # 3. Calculate penalties
-        penalties = PenaltyCalculator.calculate(jd, resume, cfg)
+        penalties = PenaltyCalculator.calculate(jd, resume, cfg, kw_res.keyword_breakdown)
 
         # 4. Compute composite hybrid score and diagnostics
         kw_contrib = round(kw_res.keyword_score * cfg.keyword_weight, 4)
@@ -188,7 +188,7 @@ class HybridRanker:
         for resume in resumes:
             kw_res = KeywordMatcher.match(jd, resume, cfg)
             sem_breakdown = sem_by_filename.get(resume.filename)
-            penalties = PenaltyCalculator.calculate(jd, resume, cfg)
+            penalties = PenaltyCalculator.calculate(jd, resume, cfg, kw_res.keyword_breakdown)
 
             kw_score = kw_res.keyword_score
             sem_score = sem_breakdown.score if sem_breakdown else 0.0

@@ -128,17 +128,28 @@ class KeywordMatcher:
 
         for req_skill in canonical_req_list:
             orig_jd_skill = canonical_req_map[req_skill]
-            if req_skill in candidate_canonical_set:
+            
+            equiv_skills = SkillNormalizer.get_equivalent_skills(req_skill)
+            matched_equivalents = equiv_skills.intersection(candidate_canonical_set)
+            
+            if matched_equivalents:
                 matched_required.append(req_skill)
-                orig_cand_skill = candidate_skill_map[req_skill]
-                sec_name, snippet = cls._find_skill_in_sections(req_skill, resume)
+                if req_skill in matched_equivalents:
+                    matching_cand_skill = req_skill
+                    match_type = "exact_canonical"
+                else:
+                    matching_cand_skill = list(matched_equivalents)[0]
+                    match_type = "semantic_equivalent"
+                    
+                orig_cand_skill = candidate_skill_map[matching_cand_skill]
+                sec_name, snippet = cls._find_skill_in_sections(matching_cand_skill, resume)
                 evidence[req_skill] = {
                     "skill": req_skill,
                     "status": "matched",
                     "tier": "required",
                     "jd_skill": orig_jd_skill,
                     "candidate_skill": orig_cand_skill,
-                    "matching_method": "exact_canonical",
+                    "matching_method": match_type,
                     "source_section": sec_name,
                     "source_context": snippet
                 }
@@ -151,7 +162,8 @@ class KeywordMatcher:
                     "jd_skill": orig_jd_skill,
                     "candidate_skill": None,
                     "matching_method": "none",
-                    "source_context": "No explicit skill evidence found in candidate profile"
+                    "source_section": None,
+                    "source_context": None
                 }
 
         # 5. Perform deterministic matching for Preferred Skills
@@ -160,17 +172,28 @@ class KeywordMatcher:
 
         for pref_skill in canonical_pref_list:
             orig_jd_skill = canonical_pref_map[pref_skill]
-            if pref_skill in candidate_canonical_set:
+            
+            equiv_skills = SkillNormalizer.get_equivalent_skills(pref_skill)
+            matched_equivalents = equiv_skills.intersection(candidate_canonical_set)
+            
+            if matched_equivalents:
                 matched_preferred.append(pref_skill)
-                orig_cand_skill = candidate_skill_map[pref_skill]
-                sec_name, snippet = cls._find_skill_in_sections(pref_skill, resume)
+                if pref_skill in matched_equivalents:
+                    matching_cand_skill = pref_skill
+                    match_type = "exact_canonical"
+                else:
+                    matching_cand_skill = list(matched_equivalents)[0]
+                    match_type = "semantic_equivalent"
+                    
+                orig_cand_skill = candidate_skill_map[matching_cand_skill]
+                sec_name, snippet = cls._find_skill_in_sections(matching_cand_skill, resume)
                 evidence[pref_skill] = {
                     "skill": pref_skill,
                     "status": "matched",
                     "tier": "preferred",
                     "jd_skill": orig_jd_skill,
                     "candidate_skill": orig_cand_skill,
-                    "matching_method": "exact_canonical",
+                    "matching_method": match_type,
                     "source_section": sec_name,
                     "source_context": snippet
                 }
@@ -183,7 +206,8 @@ class KeywordMatcher:
                     "jd_skill": orig_jd_skill,
                     "candidate_skill": None,
                     "matching_method": "none",
-                    "source_context": "No explicit skill evidence found in candidate profile"
+                    "source_section": None,
+                    "source_context": None
                 }
 
         # 6. Compute Subscores

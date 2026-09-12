@@ -53,13 +53,13 @@ class SemanticMatcher:
     DEFAULT_TOP_MATCHES_COUNT: int = 5
 
     # Section weights for JD requirements
-    JD_SECTION_WEIGHTS: Dict[str, float] = {
+    JD_SECTION_WEIGHTS = {
         "required": 1.0,
-        "responsibilities": 0.85,
-        "contextual": 0.85,
-        "preferred": 0.50,
-        "general": 0.30,
-        "other": 0.50,
+        "preferred": 0.60,
+        "responsibilities": 0.30,
+        "contextual": 0.10,
+        "general": 0.10,
+        "other": 0.10
     }
 
     _model: Any = None
