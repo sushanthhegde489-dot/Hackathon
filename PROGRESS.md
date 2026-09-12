@@ -103,11 +103,65 @@ tests/test_text_cleaner.py (5 passed)
 
 ---
 
-## 8. Next Recommended Task
+## 8. Phase 6 — End-to-End Streamlit Recruiter Application
 
-- **Phase 6 — Streamlit Recruiter Application**:
-  - Build interactive UI in `app/ui/` or `app/main.py`.
-  - Implement dual file upload: 1 Job Description PDF + 15–18 Resume PDFs.
-  - Interactive ranked leaderboard with live score diagnostics (`keyword_contribution`, `semantic_contribution`, `penalty`, `final_score`).
-  - Evidence drawers showing exact matched skills, sentence similarity evidence, and human-readable `ranking_reason`.
-  - Advanced configuration drawer with preset selector and sensitivity warning.
+### Files Created / Changed
+- [`app/main.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/app/main.py) *(NEW)*: Complete Streamlit recruiter application with dual JD ingestion, 18-resume loader, Top 3 spotlight cards, full leaderboard, deep-dive inspector, and CSV/JSON export.
+- [`app/ui_helpers.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/app/ui_helpers.py) *(NEW)*: Helper routines for UI presets, sample JDs, curated 18-resume loader from `data/resumes/`, batch validation, stuffing warnings, and export formatters.
+- [`ingestion/pdf_parser.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/ingestion/pdf_parser.py): Enhanced `extract_text` to accept `Union[str, Path, bytes, BinaryIO]` for direct parsing of uploaded files and byte streams.
+- [`extraction/jd_extractor.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/extraction/jd_extractor.py): Enhanced experience pattern recognition for flexible JD formats (e.g. `Experience Required: 2+ years`).
+- [`tests/test_app_helpers.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/tests/test_app_helpers.py) *(NEW)*: 7 unit tests covering presets, adversarial warnings, batch validation, stream parsing, and export formatters.
+- [`tests/test_e2e_pipeline.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/tests/test_e2e_pipeline.py) *(NEW)*: 2 end-to-end integration tests executing the complete workflow across 18 real PDF resumes from `data/resumes/`.
+
+### Key Application Features
+1. **100% Local & Offline**: All embedding similarity runs locally on CPU (`all-MiniLM-L6-v2`). Zero external API keys or LLMs required for candidate scoring.
+2. **Dual JD Ingestion**: Upload custom JD PDF, paste JD text directly, or load pre-packaged realistic sample JDs.
+3. **Flexible Resume Input**: Upload multi-PDF batches or click "Load 18 Demo Resumes" to instantly evaluate 18 curated real resumes from `data/resumes/`.
+4. **Batch Health Checking**: Validates candidate counts (optimal range: 15–18), flags duplicate filenames, and gracefully highlights corrupted/unreadable PDFs without halting execution.
+5. **Top 3 Candidate Spotlight**: Gold, Silver, and Bronze feature cards displaying candidate metrics, score decomposition bars, matched/missing required skills, preferred skills, strongest semantic match snippet, and experience penalty.
+6. **Full Ranked Leaderboard**: Interactive table rendering all 15–18 candidates with formatted score percentages (`73.8%`), base score, keyword score, semantic score, experience, and penalties.
+7. **Deep-Dive Candidate Inspector**: Expanders for all candidates providing decision provenance, mathematical breakdown formula, and raw extracted text.
+8. **Audited Safety Controls**: Preset selector with a prominent warning when $W_{\text{kw}} \ge 0.60$ based on Phase 5 calibration findings.
+9. **Instant Re-Ranking**: PDF text extraction and embeddings are cached; adjusting weight sliders recalculates rankings in $< 10\text{ms}$.
+10. **Data Export**: One-click download of the complete leaderboard as CSV or JSON.
+
+---
+
+## 9. Complete Test Suite & Verification Results
+
+Executed full pytest suite:
+```bash
+python -m pytest -v tests
+```
+
+**Results: 118 passed in 13.97s (100% pass rate)**
+
+```
+tests/test_app_helpers.py (7 passed)        <-- NEW PHASE 6 SUITE
+tests/test_e2e_pipeline.py (2 passed)       <-- NEW PHASE 6 E2E SUITE
+tests/test_edge_cases.py (5 passed)
+tests/test_false_positives.py (4 passed)
+tests/test_hybrid_ranker.py (18 passed)
+tests/test_jd_extractor.py (6 passed)
+tests/test_keyword_matcher.py (22 passed)
+tests/test_models_and_config.py (2 passed)
+tests/test_penalty_calculator.py (8 passed)
+tests/test_ranking_audit.py (10 passed)
+tests/test_resume_extractor.py (3 passed)
+tests/test_semantic_matcher.py (21 passed)
+tests/test_skill_normalizer.py (5 passed)
+tests/test_text_cleaner.py (5 passed)
+```
+
+---
+
+## 10. How to Launch the Application
+
+Run the Streamlit application from the repository root:
+```bash
+streamlit run app/main.py
+```
+Or with the active virtual environment:
+```powershell
+.venv\Scripts\streamlit.exe run app/main.py
+```

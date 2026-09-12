@@ -96,10 +96,11 @@ class JDExtractor:
 
         text = raw_text.lower()
         patterns = [
+            r"experience\s*(?:required)?\s*:\s*(\d+(?:\.\d+)?)\s*(?:\+|-)?\s*year[s]?",
             r"(\d+(?:\.\d+)?)\s*(?:to|-)\s*\d+(?:\.\d+)?\s*year[s]?",
-            r"(\d+(?:\.\d+)?)\s*(?:\+|-)?\s*year[s]?\s*(?:of\s*)?experience",
+            r"(\d+(?:\.\d+)?)\s*(?:\+|-)?\s*year[s]?(?:\s+of)?\s+(?:[a-z\s]{0,35})?\s*experience",
             r"experience\s*(?:of\s*)?(?:at\s*least\s*)?(\d+(?:\.\d+)?)\s*year[s]?",
-            r"minimum\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*year[s]?"
+            r"minimum\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(?:\+)?\s*year[s]?"
         ]
 
         for pattern in patterns:

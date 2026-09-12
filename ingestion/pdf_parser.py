@@ -7,6 +7,9 @@ from pypdf import PdfReader
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+import io
+from typing import List, Dict, Union, BinaryIO
+
 class PDFParser:
     """Utility class for discovering and parsing PDF documents."""
 
@@ -27,38 +30,52 @@ class PDFParser:
         return unique_pdfs
 
     @staticmethod
-    def extract_text(file_path: Union[str, Path]) -> str:
+    def extract_text(file_path_or_source: Union[str, Path, bytes, BinaryIO]) -> str:
         """
-        Extracts raw text from a PDF file.
+        Extracts raw text from a PDF file path, raw bytes, or file-like stream.
         Handles errors gracefully and returns an empty string for empty/corrupted files.
         """
-        path = Path(file_path)
-        if not path.exists():
-            logger.error(f"File not found: {path}")
-            return ""
-        
-        if not path.is_file():
-            logger.error(f"Path is not a file: {path}")
-            return ""
-
         try:
-            reader = PdfReader(path)
+            source_name = "stream"
+            if isinstance(file_path_or_source, (str, Path)):
+                path = Path(file_path_or_source)
+                source_name = path.name
+                if not path.exists():
+                    logger.error(f"File not found: {path}")
+                    return ""
+                if not path.is_file():
+                    logger.error(f"Path is not a file: {path}")
+                    return ""
+                reader = PdfReader(path)
+            elif isinstance(file_path_or_source, (bytes, bytearray)):
+                if not file_path_or_source:
+                    return ""
+                reader = PdfReader(io.BytesIO(file_path_or_source))
+            elif hasattr(file_path_or_source, "read"):
+                # Handle file-like objects (e.g. Streamlit UploadedFile)
+                if hasattr(file_path_or_source, "seek"):
+                    file_path_or_source.seek(0)
+                if hasattr(file_path_or_source, "name"):
+                    source_name = getattr(file_path_or_source, "name")
+                reader = PdfReader(file_path_or_source)
+            else:
+                logger.error(f"Unsupported source type: {type(file_path_or_source)}")
+                return ""
+
             text_parts = []
-            
             for i, page in enumerate(reader.pages):
                 page_text = page.extract_text()
                 if page_text:
                     text_parts.append(page_text)
                 else:
-                    logger.debug(f"No text extracted from page {i} of {path.name}")
+                    logger.debug(f"No text extracted from page {i} of {source_name}")
                     
             raw_text = "\n".join(text_parts).strip()
-            
             if not raw_text:
-                logger.warning(f"No text could be extracted from PDF: {path.name}")
+                logger.warning(f"No text could be extracted from PDF: {source_name}")
                 return ""
                 
             return raw_text
         except Exception as e:
-            logger.error(f"Error reading PDF file {path.name}: {str(e)}", exc_info=True)
+            logger.error(f"Error reading PDF {source_name}: {str(e)}", exc_info=True)
             return ""
