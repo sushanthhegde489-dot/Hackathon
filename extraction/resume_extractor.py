@@ -27,7 +27,7 @@ class ResumeExtractor:
     # Common vocabulary of tech skills to search for
     TECH_SKILLS_VOCAB = [
         "python", "javascript", "typescript", "java", "c++", "c#", ".net", "go", "ruby", "php", "swift", "kotlin", "rust",
-        "react", "angular", "vue", "next.js", "svelte", "jquery", "bootstrap", "tailwind", "html", "css",
+        "react", "react native", "angular", "vue", "next.js", "svelte", "jquery", "bootstrap", "tailwind", "html", "css",
         "node.js", "express", "django", "flask", "fastapi", "spring boot", "laravel", "rails",
         "mongodb", "postgresql", "mysql", "redis", "sqlite", "sql server", "dynamodb",
         "aws", "azure", "gcp", "docker", "kubernetes", "git", "ci/cd", "jenkins", "terraform",
@@ -122,8 +122,15 @@ class ResumeExtractor:
                 if re.search(pattern, cleaned_text):
                     found_skills.append(skill)
             else:
-                if skill_cleaned in tokens:
-                    found_skills.append(skill)
+                if skill_cleaned == "react":
+                    # Disambiguate React (web) from React Native (mobile)
+                    text_without_rn = re.sub(r"\breact\s+native\b", "", cleaned_text)
+                    tokens_without_rn = set(TextCleaner.extract_words(text_without_rn))
+                    if any(t in tokens_without_rn for t in ["react", "react.js", "reactjs"]):
+                        found_skills.append(skill)
+                else:
+                    if skill_cleaned in tokens:
+                        found_skills.append(skill)
 
         return SkillNormalizer.normalize_list(found_skills)
 

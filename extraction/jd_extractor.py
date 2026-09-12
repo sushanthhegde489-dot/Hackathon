@@ -20,7 +20,7 @@ class JDExtractor:
         # Languages
         "python", "javascript", "typescript", "java", "c++", "c#", ".net", "go", "ruby", "php", "swift", "kotlin", "rust",
         # Frontend
-        "react", "angular", "vue", "next.js", "svelte", "jquery", "bootstrap", "tailwind", "html", "css",
+        "react", "react native", "angular", "vue", "next.js", "svelte", "jquery", "bootstrap", "tailwind", "html", "css",
         # Backend & Frameworks
         "node.js", "express", "django", "flask", "fastapi", "spring boot", "laravel", "rails",
         # Databases & Caching
@@ -35,19 +35,19 @@ class JDExtractor:
 
     # Section header regex patterns
     REQUIRED_SECTION_PATTERN = re.compile(
-        r"^(?:(?:minimum|basic|key|core|mandatory|role)\s+)?(?:requirements|qualifications|skills|requirements\s*&?\s*skills)\b|"
-        r"^what\s+(?:you['’]ll\s+need|you\s+need|we['’]re\s+looking\s+for)\b|"
-        r"^must\s+have[s]?\b|"
-        r"^eligibility\b",
+        r"^(?:(?:minimum|basic|key|core|mandatory|role)\s+)?(?:requirements|qualifications|skills|requirements\s*&?\s*skills)\s*$|"
+        r"^what\s+(?:you['’]ll\s+need|you\s+need|we['’]re\s+looking\s+for)\s*$|"
+        r"^must\s+have[s]?\s*$|"
+        r"^eligibility(?:\s+criteria)?\s*$",
         re.IGNORECASE
     )
 
     PREFERRED_SECTION_PATTERN = re.compile(
-        r"^(?:preferred|desired|additional|optional|bonus)\s+(?:qualifications|skills|requirements)\b|"
-        r"^nice\s+to\s+have[s]?\b|"
-        r"^good\s+to\s+have[s]?\b|"
-        r"^bonus\s+(?:points|qualifications)?\b|"
-        r"^pluses\b",
+        r"^(?:preferred|desired|additional|optional|bonus)(?:\s+(?:qualifications|skills|requirements))?\s*$|"
+        r"^nice\s+to\s+have[s]?\s*$|"
+        r"^good\s+to\s+have[s]?\s*$|"
+        r"^bonus(?:\s+(?:points|qualifications))?\s*$|"
+        r"^pluses\s*$",
         re.IGNORECASE
     )
 
@@ -163,9 +163,16 @@ class JDExtractor:
                     canonical = SkillNormalizer.normalize(skill)
                     found.append((canonical, skill))
             else:
-                if skill_cleaned in tokens:
-                    canonical = SkillNormalizer.normalize(skill)
-                    found.append((canonical, skill))
+                if skill_cleaned == "react":
+                    text_without_rn = re.sub(r"\breact\s+native\b", "", cleaned_text)
+                    tokens_without_rn = set(TextCleaner.extract_words(text_without_rn))
+                    if any(t in tokens_without_rn for t in ["react", "react.js", "reactjs"]):
+                        canonical = SkillNormalizer.normalize(skill)
+                        found.append((canonical, skill))
+                else:
+                    if skill_cleaned in tokens:
+                        canonical = SkillNormalizer.normalize(skill)
+                        found.append((canonical, skill))
 
         return found
 
