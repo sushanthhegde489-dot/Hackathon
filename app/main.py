@@ -64,17 +64,6 @@ def apply_preset():
 
 def render_sidebar() -> RankingConfig:
     """Render the sidebar configuration and return the active ranking config."""
-    st.sidebar.markdown("### Interface Theme")
-    st.sidebar.radio(
-        "Display Mode",
-        options=["Dark Mode", "Light Mode"],
-        index=0,
-        horizontal=True,
-        key="theme_mode",
-        label_visibility="collapsed",
-        help="Toggle between Deep Slate Dark Mode and Warm Neutral Light Mode."
-    )
-    st.sidebar.markdown("---")
     st.sidebar.markdown("### Calibration & Scoring")
 
     # Initialize session state for weights if not present
@@ -83,9 +72,9 @@ def render_sidebar() -> RankingConfig:
         st.session_state.selected_preset = default_preset
         apply_preset()
 
-    selected_preset = st.sidebar.selectbox(
+    selected_preset = st.sidebar.radio(
         "Configuration Preset",
-        list(PRESET_CONFIGS.keys()),
+        options=list(PRESET_CONFIGS.keys()),
         key="selected_preset",
         on_change=apply_preset,
         help="Pre-calibrated scoring profiles."
@@ -400,115 +389,77 @@ def render_leaderboard(ranked_results: List[CandidateResult]):
     if not filtered_results:
         st.markdown('<div class="custom-alert custom-alert-info">No candidates match your search query.</div>', unsafe_allow_html=True)
     else:
-        # Build custom HTML table with dark brown header and beige alternating rows
-        rows_html = ""
+        csv_rows = []
         for rank, res in filtered_results:
             diag = res.diagnostics
+            kw = res.keyword_breakdown
             pen = res.penalties.total_penalty
-            pen_class = "cell-penalty" if pen > 0.0 else "cell-penalty-zero"
             pen_display = f"-{format_percentage(pen)}" if pen > 0.0 else "0.0%"
 
-            # Chips for required matched and missing
-            chips = ""
-            matched_req = res.keyword_breakdown.matched_required_skills
-            missing_req = res.keyword_breakdown.missing_required_skills
-            for s in matched_req[:2]:
-                chips += f'<span class="chip chip-matched">{s}</span>'
-            for s in missing_req[:2]:
-                chips += f'<span class="chip chip-missing">{s}</span>'
+            csv_rows.append({
+                "Rank": f"#{rank}",
+                "Candidate Name": res.resume.candidate_name,
+                "Filename": res.resume.filename,
+                "Final Score": format_percentage(res.final_score),
+                "Keyword Score": format_percentage(diag.keyword_score),
+                "Semantic Score": format_percentage(diag.semantic_score),
+                "Experience (Yrs)": f"{res.resume.experience_years:.1f}",
+                "Experience Penalty": pen_display,
+                "Matched Required Skills": ", ".join(kw.matched_required_skills) or "None",
+                "Missing Required Skills": ", ".join(kw.missing_required_skills) or "None",
+                "Matched Preferred Skills": ", ".join(kw.matched_preferred_skills) or "None",
+                "Ranking Rationale": res.ranking_reason
+            })
 
-            rows_html += f"""
-            <tr>
-                <td class="cell-rank">#{rank}</td>
-                <td class="cell-candidate">
-                    <div>{res.resume.candidate_name}</div>
-                    <div class="cell-subtext">{res.resume.filename}</div>
-                </td>
-                <td class="cell-final-score">{format_percentage(res.final_score)}</td>
-                <td class="cell-secondary-score">{format_percentage(diag.keyword_score)}</td>
-                <td class="cell-secondary-score">{format_percentage(diag.semantic_score)}</td>
-                <td class="{pen_class}">{pen_display}</td>
-                <td><div class="chip-container">{chips}</div></td>
-            </tr>
-            """
+        df_leaderboard = pd.DataFrame(csv_rows)
+        st.dataframe(df_leaderboard, use_container_width=True, hide_index=True)
 
-        table_html = f"""
-        <div class="leaderboard-container">
-            <table class="leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Candidate</th>
-                        <th>Final Score</th>
-                        <th>Keyword</th>
-                        <th>Semantic</th>
-                        <th>Experience Penalty</th>
-                        <th>Key Skills Overview</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows_html}
-                </tbody>
-            </table>
-        </div>
-        """
-        st.markdown(table_html, unsafe_allow_html=True)
-
-    col1, col2, _ = st.columns([2.5, 2.5, 3])
-    with col1:
-        st.download_button(
-            label="Export Leaderboard to CSV",
-            data=generate_leaderboard_csv(ranked_results),
-            file_name=f"shortlisting_leaderboard_{int(time.time())}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    with col2:
-        st.download_button(
-            label="Export Leaderboard to JSON",
-            data=generate_leaderboard_json(ranked_results),
-            file_name=f"shortlisting_leaderboard_{int(time.time())}.json",
-            mime="application/json",
-            use_container_width=True
-        )
+        col1, col2, _ = st.columns([2.5, 2.5, 3])
+        active_results = [res for _, res in filtered_results]
+        with col1:
+            st.download_button(
+                label="Export Leaderboard to CSV",
+                data=generate_leaderboard_csv(active_results),
+                file_name=f"shortlisting_leaderboard_{int(time.time())}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        with col2:
+            st.download_button(
+                label="Export Leaderboard to JSON",
+                data=generate_leaderboard_json(active_results),
+                file_name=f"shortlisting_leaderboard_{int(time.time())}.json",
+                mime="application/json",
+                use_container_width=True
+            )
 
 
 def render_qa_assistant(ranked_results: List[CandidateResult], current_jd: JobDescription):
-    """Render the Recruiter Q&A Assistant with 4 working suggested queries."""
+    """Render the Recruiter Q&A Assistant."""
     st.markdown("---")
     st.markdown(
         '<div class="bonus-banner">'
         '<div class="bonus-tag">★ Bonus feature — Recruiter Q&A</div>'
-        '<div class="bonus-desc">Ask evidence-based questions about candidate rankings and skill gaps.</div>'
+        '<div class="bonus-desc">Ask evidence-based questions about candidate rankings, score differences, and skill gaps.</div>'
         '</div>',
         unsafe_allow_html=True
     )
 
     qa_engine = RecruiterQAEngine(ranked_results, current_jd)
-    suggested_questions = qa_engine.get_suggested_questions()
-
-    if "active_qa_query" not in st.session_state:
-        st.session_state.active_qa_query = ""
-
-    st.markdown('<div class="qa-suggestions-label">Suggested Questions</div>', unsafe_allow_html=True)
-
-    # 4 distinct question buttons in 2 columns
-    q_cols = st.columns(2)
-    for i, q_text in enumerate(suggested_questions[:4]):
-        col_idx = i % 2
-        if q_cols[col_idx].button(q_text, key=f"btn_qa_suggest_{i}", use_container_width=True):
-            st.session_state.active_qa_query = q_text
 
     user_query = st.text_input(
-        "Or enter a custom question:",
-        value=st.session_state.active_qa_query,
-        placeholder="e.g. Why did #1 rank above #2?",
+        "Enter your recruiter inquiry:",
+        placeholder="e.g. Why did #1 rank above #2? or Who is missing a required skill?",
         key="qa_input_box"
     )
 
-    query_to_execute = user_query.strip() or st.session_state.active_qa_query.strip()
+    col_btn, _ = st.columns([2.5, 4])
+    with col_btn:
+        submit_btn = st.button("Submit Recruiter Inquiry", type="primary", key="btn_submit_qa", use_container_width=True)
 
-    if query_to_execute:
+    query_to_execute = user_query.strip()
+
+    if (submit_btn or query_to_execute) and query_to_execute:
         qa_resp = qa_engine.answer_query(query_to_execute)
         st.markdown(
             f'<div class="qa-result-card">'
@@ -564,11 +515,8 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    # Determine active theme (defaults to Dark Mode)
-    active_theme = "dark" if st.session_state.get("theme_mode", "Dark Mode") == "Dark Mode" else "light"
-
-    # Inject centralized stylesheet (Dark Mode or Light Mode)
-    st.markdown(get_app_css(theme=active_theme), unsafe_allow_html=True)
+    # Inject centralized high-contrast stylesheet
+    st.markdown(get_app_css(), unsafe_allow_html=True)
 
     # App header
     st.markdown(
@@ -584,25 +532,57 @@ def main():
     current_jd = render_jd_section()
     
     if not current_jd:
-        st.markdown('<div class="custom-alert custom-alert-info">Select or upload a Job Description above to evaluate candidates.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="custom-alert custom-alert-info">Step 1: Select or upload a Job Description above to evaluate candidates.</div>', unsafe_allow_html=True)
         return
 
     loaded_resumes = render_resume_section()
 
-    if loaded_resumes and current_jd:
-        if st.button("Rank Resumes Against Job Description", type="primary", use_container_width=True):
-            with st.spinner("Scoring and ranking candidates..."):
-                ranked_results = HybridRanker.rank_batch(current_jd, loaded_resumes, config=active_config)
-                st.session_state.ranked_results = ranked_results
+    if not loaded_resumes:
+        st.markdown(
+            '<div class="custom-alert custom-alert-info">'
+            'Step 2: Awaiting candidate resumes. Click "Load 18 Demo Resumes" above or upload a PDF batch to begin shortlisting.'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        return
 
-        if "ranked_results" in st.session_state and st.session_state.ranked_results:
-            ranked_results = st.session_state.ranked_results
-            
-            st.markdown("---")
-            render_top_spotlights(ranked_results)
-            render_leaderboard(ranked_results)
-            render_qa_assistant(ranked_results, current_jd)
-            render_deep_dive(ranked_results)
+    st.markdown("---")
+    st.markdown(
+        f'<div class="custom-alert custom-alert-success">'
+        f'Engine Ready: {len(loaded_resumes)} candidate resumes loaded and pre-processed for "{current_jd.title}". '
+        f'Click below to generate hybrid rankings and audit logs.'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    if st.button("Rank Resumes Against Job Description", type="primary", use_container_width=True):
+        with st.status("Processing and evaluating candidate batch...", expanded=True) as status_box:
+            st.write("Step 1/4: Ingesting resumes and extracting structured candidate profiles...")
+            time.sleep(0.15)
+            st.write("Step 2/4: Generating contextual semantic embeddings on local CPU...")
+            time.sleep(0.2)
+            st.write("Step 3/4: Calculating keyword coverage, negative constraints, and experience penalties...")
+            ranked_results = HybridRanker.rank_batch(current_jd, loaded_resumes, config=active_config)
+            time.sleep(0.15)
+            st.write(f"Step 4/4: Successfully scored and ranked {len(ranked_results)} candidates.")
+            st.session_state.ranked_results = ranked_results
+            status_box.update(label=f"Shortlisting Complete — Ranked {len(ranked_results)} candidates!", state="complete", expanded=False)
+
+    if "ranked_results" in st.session_state and st.session_state.ranked_results:
+        ranked_results = st.session_state.ranked_results
+        
+        st.markdown("---")
+        render_top_spotlights(ranked_results)
+        render_leaderboard(ranked_results)
+        render_qa_assistant(ranked_results, current_jd)
+        render_deep_dive(ranked_results)
+    else:
+        st.markdown(
+            '<div class="custom-alert custom-alert-info">'
+            'Click the "Rank Resumes Against Job Description" button above to initiate candidate evaluation.'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
 
 if __name__ == "__main__":

@@ -268,31 +268,25 @@ class TestAppHelpers:
         assert any("Full Ranked Leaderboard" in t for t in markdown_vals)
         assert any("Recruiter Q&A" in t for t in markdown_vals)
 
-        # Verify QA buttons function
-        qa_btns = [b for b in at.button if b.key and "btn_qa_suggest" in b.key]
-        assert len(qa_btns) == 4
-        qa_btns[0].click().run()
+        # Verify QA inquiry submission
+        qa_input = next(i for i in at.text_input if i.key == "qa_input_box")
+        qa_input.set_value("Why did #1 rank above #2?").run()
+        qa_submit = next(b for b in at.button if b.key == "btn_submit_qa")
+        qa_submit.click().run()
         after_click = [m.value for m in at.markdown]
         assert any("qa-result-card" in t for t in after_click)
 
-    def test_dual_theme_css_palettes(self):
-        """Verifies both Dark Mode and Light Mode CSS inject valid brown, darker grey, and light blue variables."""
+    def test_high_contrast_theme_css(self):
+        """Verifies high-contrast unified CSS injects valid walnut brown, charcoal, and soft sky blue variables."""
         from app.styles import get_app_css
 
-        dark_css = get_app_css("dark")
-        assert "--bg-main: #111418" in dark_css
-        assert "--brand-brown: #7A5B45" in dark_css
-        assert "--accent-blue: #60A5FA" in dark_css
-        assert "--table-header-bg" in dark_css
+        css = get_app_css()
+        assert "--walnut-brown: #5C4033" in css
+        assert "--text-primary: #111827" in css
+        assert "--sky-blue: #1D70B8" in css
+        assert "--header-bg-gradient" in css
 
-        light_css = get_app_css("light")
-        assert "--bg-main: #F7F5F0" in light_css
-        assert "--brand-brown: #543E2E" in light_css
-        assert "--text-primary: #161B22" in light_css
-        assert "--accent-blue: #2563EB" in light_css
-
-        # Zero emojis in both CSS stylesheets
-        for css in [dark_css, light_css]:
-            for emoji in ["💡", "⭐", "🏆", "🥇", "🥈", "🥉", "✨"]:
-                assert emoji not in css
+        # Zero emojis in CSS
+        for emoji in ["💡", "⭐", "🏆", "🥇", "🥈", "🥉", "✨"]:
+            assert emoji not in css
 

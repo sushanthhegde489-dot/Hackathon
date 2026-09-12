@@ -40,3 +40,23 @@
   - Light Blue Mixed Shades: `#60A5FA` / `rgba(96, 165, 250, 0.12)` in dark mode, `#2563EB` / `#EFF6FF` in light mode for system badges, preferred skill chips, active tabs, and Q&A suggestion headers.
 - **Strict Constraint Adherence**: Zero non-UI changes; core algorithms, ranking models, and math untouched.
 - **Testing**: 140/140 automated tests passing with 100% pass rate.
+
+## Phase 8: Recruiter UX Refinements & Walnut Palette (Complete)
+- **Preset Selection Guard**: Replaced selectbox with `st.sidebar.radio` so recruiters cannot delete, backspace, or type arbitrary prompt text into pre-calibrated profiles.
+- **Branded Consistent Header**: Styled `.app-header` as a cohesive container with walnut brown border-left accent, charcoal surface, and soft sky blue gradient sheen.
+- **Walnut Brown, Charcoal & Soft Sky Blue Gradients**:
+  - Walnut Brown: `#5C4033`, `#6A4B35`, `#3F2B1E`, `#8E6548`.
+  - Charcoal: `#14171B`, `#1C2026`, `#222730`, `#2E3540`.
+  - Soft Sky Blue Gradients: `#70B5F9`, `rgba(112, 181, 249, 0.22)`, `--sky-gradient`.
+- **Text Visibility & Contrast**: 100% explicit high-contrast foreground guarantees across markdown, tables, expanders, captions, inputs, and cards for both themes.
+- **Leaderboard CSV Results Table**: Added dedicated "Leaderboard CSV Results Table" view tab with interactive, searchable, sortable dataframe displaying all CSV scoring columns directly on screen.
+- **Multi-Step Processing Transparency**: Replaced minimal spinner with `st.status` 4-step progress execution and clear step banners, ensuring the UI never displays a blank empty state.
+- **Recruiter Q&A Cleanup**: Removed suggested questions buttons from the UI, retaining the clean text inquiry input and submit button.
+- **Testing**: 140/140 automated tests passing with 100% pass rate.
+
+## Phase 9: Unified High-Contrast Theme & Clean Table (Complete)
+- **Removed Dark Mode**: Eliminated dark mode toggle and streamlined to a single unified, professional light theme.
+- **Maximum Background Text Contrast**: Deep dark charcoal typography (`#111827`, `#161B22`, `#374151`) on warm ivory cream (`#F8F6F2`) and white surfaces (`#FFFFFF`) for 100% legible, high-contrast reading.
+- **Removed Stylized Leaderboard**: Replaced the custom HTML table with a clean, native, high-contrast interactive `st.dataframe` Leaderboard Results Table with all scoring, skill, and penalty columns, accompanied by instant CSV/JSON exports.
+- **Zero Backend Changes**: All ranking, matching, scoring, and models strictly preserved.
+- **Testing**: 140/140 automated tests passing with 100% pass rate.
