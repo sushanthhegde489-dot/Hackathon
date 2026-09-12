@@ -16,7 +16,9 @@ TEST_FIXTURE_DIR = TEST_DIR / "test_fixtures"
 
 # Models
 # Default lightweight CPU embedding model
-DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+_LOCAL_MODEL_DIR = BASE_DIR / "models" / "all-MiniLM-L6-v2"
+DEFAULT_EMBEDDING_MODEL = str(_LOCAL_MODEL_DIR) if _LOCAL_MODEL_DIR.exists() else "all-MiniLM-L6-v2"
+
 
 from dataclasses import dataclass
 

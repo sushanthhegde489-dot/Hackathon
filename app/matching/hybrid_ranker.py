@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from app.config import RankingConfig, DEFAULT_RANKING_CONFIG
-from app.models import JobDescription, Resume, CandidateResult
+from app.models import JobDescription, Resume, CandidateResult, ScoreDiagnostics
 from app.matching.keyword_matcher import KeywordMatcher
 from app.matching.semantic_matcher import SemanticMatcher
 from app.matching.penalty_calculator import PenaltyCalculator
@@ -121,12 +121,24 @@ class HybridRanker:
         # 3. Calculate penalties
         penalties = PenaltyCalculator.calculate(jd, resume, cfg)
 
-        # 4. Compute composite hybrid score
-        base_score = (
-            (kw_res.keyword_score * cfg.keyword_weight) +
-            (sem_res.semantic_score * cfg.semantic_weight)
-        )
+        # 4. Compute composite hybrid score and diagnostics
+        kw_contrib = round(kw_res.keyword_score * cfg.keyword_weight, 4)
+        sem_contrib = round(sem_res.semantic_score * cfg.semantic_weight, 4)
+        base_score = round(kw_contrib + sem_contrib, 4)
         final_score = round(max(0.0, min(1.0, base_score - penalties.total_penalty)), 4)
+
+        diagnostics = ScoreDiagnostics(
+            keyword_score=kw_res.keyword_score,
+            keyword_weight=cfg.keyword_weight,
+            keyword_contribution=kw_contrib,
+            semantic_score=sem_res.semantic_score,
+            semantic_weight=cfg.semantic_weight,
+            semantic_contribution=sem_contrib,
+            base_score=base_score,
+            experience_penalty=penalties.experience_penalty,
+            total_penalty=penalties.total_penalty,
+            final_score=final_score
+        )
 
         # 5. Assemble result object
         result = CandidateResult(
@@ -134,6 +146,7 @@ class HybridRanker:
             keyword_breakdown=kw_res.keyword_breakdown,
             semantic_breakdown=sem_res.semantic_breakdown,
             penalties=penalties,
+            diagnostics=diagnostics,
             final_score=final_score,
             ranking_reason=""
         )
@@ -179,14 +192,30 @@ class HybridRanker:
             kw_score = kw_res.keyword_score
             sem_score = sem_breakdown.score if sem_breakdown else 0.0
 
-            base_score = (kw_score * cfg.keyword_weight) + (sem_score * cfg.semantic_weight)
+            kw_contrib = round(kw_score * cfg.keyword_weight, 4)
+            sem_contrib = round(sem_score * cfg.semantic_weight, 4)
+            base_score = round(kw_contrib + sem_contrib, 4)
             final_score = round(max(0.0, min(1.0, base_score - penalties.total_penalty)), 4)
+
+            diagnostics = ScoreDiagnostics(
+                keyword_score=kw_score,
+                keyword_weight=cfg.keyword_weight,
+                keyword_contribution=kw_contrib,
+                semantic_score=sem_score,
+                semantic_weight=cfg.semantic_weight,
+                semantic_contribution=sem_contrib,
+                base_score=base_score,
+                experience_penalty=penalties.experience_penalty,
+                total_penalty=penalties.total_penalty,
+                final_score=final_score
+            )
 
             cand_res = CandidateResult(
                 resume=resume,
                 keyword_breakdown=kw_res.keyword_breakdown,
                 semantic_breakdown=sem_breakdown,
                 penalties=penalties,
+                diagnostics=diagnostics,
                 final_score=final_score,
                 ranking_reason=""
             )

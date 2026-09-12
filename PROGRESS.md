@@ -2,149 +2,79 @@
 
 ## 1. Current Architectural Status
 
-The end-to-end backend pipeline — PDF ingestion, text normalization, multi-tier JD/resume extraction, canonical keyword matching, section-aware semantic matching, experience penalty calculation, and hybrid ranking — is **fully implemented, calibrated, and verified**.
-All 99 unit, integration, and benchmark tests are passing (100% pass rate).
+The end-to-end backend pipeline — PDF ingestion, text normalization, multi-tier JD/resume extraction, canonical keyword matching, section-aware semantic matching, experience penalty calculation, machine-readable score diagnostics, and hybrid ranking — is **fully implemented, calibrated, audited, and verified**.
+All **109 unit, integration, and benchmark tests** are passing (100% pass rate in ~7.6s on CPU).
 
 ---
 
-## 2. Phase 4 — Hybrid Ranking, Experience Penalties, and Calibration
+## 2. Phase 5 — Ranking Audit, Calibration, and Adversarial Evaluation
 
 ### Files Created / Changed
-- [`app/matching/penalty_calculator.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/app/matching/penalty_calculator.py) *(NEW)*: Dedicated `PenaltyCalculator` evaluating experience gaps with configurable rates and caps.
-- [`app/matching/hybrid_ranker.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/app/matching/hybrid_ranker.py) *(NEW)*: Orchestrator integrating keyword scoring, semantic scoring, and penalties into `final_score` with complete explainability.
-- [`app/config.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/app/config.py): Added `experience_penalty_per_year`, `maximum_experience_penalty`, `semantic_noise_threshold`, and `RankingConfig.validate()`.
-- [`app/matching/__init__.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/app/matching/__init__.py): Exported `PenaltyCalculator` and `HybridRanker`.
-- [`tests/test_penalty_calculator.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/tests/test_penalty_calculator.py) *(NEW)*: 8 unit tests covering gaps, caps, fresher protection, and malformed inputs.
-- [`tests/test_hybrid_ranker.py`](file:///c:/Users/KIIT0001/Documents/GitHub/Hackathon/tests/test_hybrid_ranker.py) *(NEW)*: 18 unit and integration tests covering formulas, config validation, invariants, anti-keyword-stuffing, and the 18-candidate evaluation fixture.
+- [`app/models.py`](file:///c:/Users/Sushanth/Downloads/Hackathon/app/models.py): Added `ScoreDiagnostics` dataclass and integrated `diagnostics` field and `base_score` property into `CandidateResult` and `CandidateResult.to_dict()`.
+- [`app/matching/hybrid_ranker.py`](file:///c:/Users/Sushanth/Downloads/Hackathon/app/matching/hybrid_ranker.py): Updated `rank()` and `rank_batch()` to compute, validate, and attach `ScoreDiagnostics` to each `CandidateResult`.
+- [`app/matching/semantic_matcher.py`](file:///c:/Users/Sushanth/Downloads/Hackathon/app/matching/semantic_matcher.py): Added `get_embedding_model()` classmethod for shared model reuse and analysis.
+- [`app/config.py`](file:///c:/Users/Sushanth/Downloads/Hackathon/app/config.py): Pointed `DEFAULT_EMBEDDING_MODEL` to local model directory `models/all-MiniLM-L6-v2` for zero-latency, 100% offline CPU execution.
+- [`tests/test_ranking_audit.py`](file:///c:/Users/Sushanth/Downloads/Hackathon/tests/test_ranking_audit.py) *(NEW)*: 10 adversarial, diagnostic, noise distribution, monotonicity, and candidate-order independence tests.
+- [`RANKING_CALIBRATION.md`](file:///c:/Users/Sushanth/Downloads/Hackathon/RANKING_CALIBRATION.md) *(NEW)*: Comprehensive audit and calibration report documenting sensitivity curves, rank flips, adversarial quadrants, and UI control recommendations.
 
 ---
 
-## 3. Penalty Architecture & Formula
+## 3. Machine-Readable Score Diagnostics (`ScoreDiagnostics`)
 
-### 1. Experience Gap Calculation
-$$\text{experience\_gap} = \max\big(0.0, \text{jd.experience\_years\_required} - \text{resume.experience\_years}\big)$$
+Every candidate result now surfaces full mathematical provenance:
+* `keyword_score` ($S_{\text{kw}}$) and `keyword_weight` ($W_{\text{kw}}$)
+* `keyword_contribution` ($C_{\text{kw}} = S_{\text{kw}} \times W_{\text{kw}}$)
+* `semantic_score` ($S_{\text{sem}}$) and `semantic_weight` ($W_{\text{sem}}$)
+* `semantic_contribution` ($C_{\text{sem}} = S_{\text{sem}} \times W_{\text{sem}}$)
+* `base_score` ($C_{\text{kw}} + C_{\text{sem}}$)
+* `experience_penalty` and `total_penalty`
+* `final_score`
 
-### 2. Penalty Deductions
-$$\text{experience\_penalty} = \min\big(\text{experience\_gap} \times \text{cfg.experience\_penalty\_per\_year}, \text{cfg.maximum\_experience\_penalty}\big)$$
-$$\text{total\_penalty} = \text{round}\big(\min(1.0, \max(0.0, \text{experience\_penalty})) , 4\big)$$
-
-- **Provisional Default Parameters**:
-  - `experience_penalty_per_year = 0.05` (5% deduction per year of experience deficit).
-  - `maximum_experience_penalty = 0.20` (capped at 20% maximum deduction).
-- **Fresher & Student Protection**:
-  - For entry-level ($0\text{--}1$ year) roles, the penalty is minor ($0.00 \text{ to } 0.05$).
-  - The $0.20$ maximum cap guarantees that an exceptional student or career-switcher with high skill and semantic alignment can remain competitive against experienced candidates.
-- **Explainability**:
-  - Exposes exact numeric gaps, rates, and caps in `PenaltyBreakdown.details`.
+`to_dict()` and `ranking_reason` render these exact decomposed terms for UI transparency.
 
 ---
 
-## 4. Hybrid Ranking Engine Architecture
+## 4. Sensitivity Analysis Across 5 Weight Regimes
 
-```
-                      Job Description + Resume
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         ▼                       ▼                       ▼
-   KeywordMatcher         SemanticMatcher         PenaltyCalculator
-  (exact canonical)      (section embeddings)     (experience gap)
-         │                       │                       │
-         ▼                       ▼                       ▼
-   keyword_score           semantic_score          total_penalty
-   (weight: 0.40)          (weight: 0.60)                │
-         │                       │                       │
-         └───────────────┬───────┘                       │
-                         ▼                               │
-                     base_score                          │
-                         │                               │
-                         └───────────────┬───────────────┘
-                                         ▼
-                                   HybridRanker
-                                         │
-                                         ▼
-                                    final_score
-                                  ranking_reason
-```
+Tested on an 18-candidate benchmark against a Software Engineering Intern JD (Required: Python, PostgreSQL, CI/CD, Microservices; Preferred: AWS, Docker; Exp Req: 1.0 yr):
 
-### 1. Hybrid Formula
-$$\text{base\_score} = (\text{keyword\_score} \times W_{\text{kw}}) + (\text{semantic\_score} \times W_{\text{sem}})$$
-$$\text{final\_score} = \text{round}\Big(\min\big(1.0, \max(0.0, \text{base\_score} - \text{total\_penalty})\big), 4\Big)$$
+| Candidate Archetype | Resume Profile Summary | KW=0.3 / SEM=0.7 | KW=0.4 / SEM=0.6 | KW=0.5 / SEM=0.5 | KW=0.6 / SEM=0.4 | KW=0.7 / SEM=0.3 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Backend Engineer** | 4/4 req + 2/2 pref, deep FastAPI experience | **#1** (0.694) | **#1** (0.738) | **#1** (0.781) | **#1** (0.825) | **#1** (0.869) |
+| **Python Developer** | 2/4 req + 1/2 pref, real Django backend exp | **#2** (0.458) | **#2** (0.464) | **#2** (0.470) | **#3** (0.476) | **#3** (0.482) |
+| **Data Engineer Intern** | 2/4 req + 1/2 pref, real SQL/PostgreSQL exp | **#3** (0.437) | **#3** (0.446) | **#4** (0.455) | **#4** (0.464) | **#4** (0.473) |
+| **Keyword Stuffer (Cashier)** | List of tech skills, supermarket cashier exp | **#4** (0.382) | **#4** (0.420) | **#3** (0.458) | **#2** (0.497) ⚠️ | **#2** (0.535) ⚠️ |
+| **DevOps Intern** | 0/4 req + 2/2 pref (Docker/AWS/K8s) | **#5** (0.360) | **#5** (0.377) | **#5** (0.393) | **#5** (0.410) | **#5** (0.426) |
+| **Full Stack Developer** | 2/4 req + 0/2 pref (React + Python) | **#6** (0.355) | **#7** (0.354) | **#7** (0.353) | **#7** (0.353) | **#7** (0.352) |
+| **Backend Paraphrase** | 0 brand keywords, deep server & API exp | **#7** (0.342) | **#9** (0.318) | **#10** (0.294) | **#10** (0.270) | **#10** (0.246) |
+| **QA Automation** | 1/4 req (pytest/CI/CD), API test exp | **#9** (0.324) | **#8** (0.327) | **#8** (0.331) | **#8** (0.335) | **#8** (0.339) |
+| **Backend Fresher (0 yr)** | 2/4 req, academic coursework, 0 yr exp | **#10** (0.295) | **#10** (0.295) | **#9** (0.296) | **#9** (0.297) | **#9** (0.298) |
+| **Frontend Dev 1** | React/Tailwind/JS, zero backend | **#14** (0.074) | **#14** (0.064) | **#14** (0.053) | **#14** (0.042) | **#14** (0.032) |
+| **Digital Marketer** | Google Ads, SEO, social media | **#18** (0.006) | **#18** (0.006) | **#18** (0.005) | **#18** (0.004) | **#18** (0.003) |
 
-- **Weight Validation**: `RankingConfig.validate()` enforces $W_{\text{kw}} \ge 0$, $W_{\text{sem}} \ge 0$, and $|(W_{\text{kw}} + W_{\text{sem}}) - 1.0| < 10^{-6}$.
-- **Candidate Independence**: Individual scores and penalties are strictly invariant to the presence, absence, or ordering of other candidates.
-- **Deterministic Tie-Breaking**: Batches sort primarily by `final_score` descending, secondarily by `resume.filename`, and tertiarily by `resume.candidate_name`.
-
-### 2. Ranking Explanation (`ranking_reason`)
-Generates comprehensive human-readable justifications:
-> *"Matched 2/2 required skills (postgresql, python). Matched 1/1 preferred skills (docker). Strongest semantic alignment in experience (similarity: 0.63). Meets experience requirement (1.0/1.0 years). Final score: 0.6192 (Base: 0.6192 [KW: 1.0000 × 0.40 + Sem: 0.3653 × 0.60] - Penalty: 0.0000)"*
+### Key Takeaway:
+At $W_{\text{kw}} \ge 0.60$, the **Keyword Stuffer (Retail Cashier)** flips ranks to jump into **#2 overall**, beating legitimate developers. At $W_{\text{kw}} \le 0.40$, the semantic component successfully resists stuffing, keeping the Cashier at #4 and preserving legitimate engineers at the top.
 
 ---
 
-## 5. Calibration Methodology & Empirical Observations
+## 5. Adversarial 4-Quadrant Verification
 
-To prevent presenting heuristics as statistics, we empirically measured the raw cosine similarity distributions of `all-MiniLM-L6-v2` across verified semantic pairs:
-
-### 1. Empirical Measurements
-- **Positive Semantic Pairs** (paraphrased backend requirements, relational databases, containers):
-  - *"Develop and maintain backend APIs"* $\leftrightarrow$ *"Built HTTP services and web endpoints"*: raw = **0.5643**
-  - *"Work with relational databases"* $\leftrightarrow$ *"Designed PostgreSQL schemas and optimized SQL"*: raw = **0.4874**
-  - *"Containerize applications"* $\leftrightarrow$ *"Dockerized web microservices and set up CI/CD"*: raw = **0.5869**
-  - *"Collaborate with agile engineering teams"* $\leftrightarrow$ *"Worked closely in 2-week sprints"*: raw = **0.5736**
-  - **Positive Range**: **0.4874 to 0.5869** (mean: **0.5531**)
-- **Negative Semantic Pairs** (unrelated roles, marketing, payroll, chef):
-  - *"Python backend development"* $\leftrightarrow$ *"Graphic design and social media marketing"*: raw = **0.1413**
-  - *"Build cloud infrastructure"* $\leftrightarrow$ *"Created promotional campaigns and brand graphics"*: raw = **0.1673**
-  - *"Develop and maintain backend APIs"* $\leftrightarrow$ *"Chef de Partie preparing Mediterranean pastries"*: raw = **0.1494**
-  - *"Design relational database schemas"* $\leftrightarrow$ *"Managed corporate payroll and travel"*: raw = **0.0993**
-  - **Negative Range**: **0.0993 to 0.1673** (mean: **0.1393**)
-
-### 2. Calibrated Value
-- Updated `semantic_noise_threshold = 0.18`: cleanly zeroes out all negative pairs ($\le 0.1673$) while preserving positive dynamic range ($0.48 \text{ to } 0.85$).
+Verified in `TestKeywordSemanticIndependence`:
+* **Case A (High KW 1.0, High Sem 0.56)**: Final = $0.738$ (Top tier).
+* **Case B (High KW 1.0, Low Sem 0.12 - Stuffer)**: Final = $0.471$ (Defeated by Case A by $\Delta = 0.267$).
+* **Case C (Zero KW 0.0, Strong Sem 0.28 - Paraphrase)**: Final = $0.170$ (Receives meaningful credit without brand keywords).
+* **Case D (Zero KW 0.0, Low Sem 0.01 - Irrelevant)**: Final = $0.007$ (Effectively zeroed out; Case C is 24x higher).
 
 ---
 
-## 6. 18-Candidate Evaluation Fixture Results
-
-Evaluated against a Backend Software Engineer JD ($2.0$ yrs exp required; `python`, `postgresql`, `fastapi` required; `docker`, `aws` preferred):
-
-| Rank | Candidate | Archetype | Final Score | Key Behavior Verified |
-| :---: | :--- | :--- | :---: | :--- |
-| **1** | `01 Excellent Backend` | All skills + 3 yrs exp | **0.7029** | Full skill coverage, high semantic depth, 0 penalty |
-| **2** | `02 Fresher Strong Backend` | All skills + 0 yrs exp | **0.5902** | Strong skills & semantics; minor 0.10 gap penalty |
-| **3** | `05 Full Stack` | React + Python backend | **0.5583** | Core backend skills satisfied |
-| **4** | `14 Student Projects` | Strong FastAPI projects | **0.5365** | Project evidence compensates for 0 yrs experience |
-| **5** | `09 Data Engineer` | Python + PostgreSQL | **0.5186** | Solid data/DB alignment |
-| **6** | `03 Stuffed Skills` | Skills list, no context | **0.5135** | Keyword matched but penalized by weak semantic depth |
-| **7** | `04 Paraphrased Backend` | 0 keywords, HTTP APIs | **0.4616** | Strong semantic evidence without exact brand tokens |
-| **8** | `07 QA Automation` | Python + testing | **0.4439** | Python and testing alignment |
-| **9** | `11 Java Backend` | Java + Spring Boot | **0.4042** | Microservice experience, but missing required Python/FastAPI |
-| **10** | `08 DevOps` | Docker + AWS | **0.3794** | Preferred skills matched, missing core programming |
-| **11** | `12 Data Scientist` | Python + ML | **0.3707** | Python matched, but lacks web API context |
-| **12** | `13 Cloud Engineer` | AWS + Docker | **0.3394** | Preferred skills matched |
-| **13** | `15 Student Basic` | 0 yrs, Python keyword | **0.2923** | Basic skills, 0.10 experience gap penalty |
-| **14** | `06 Frontend Heavy` | React + Tailwind | **0.2526** | Mismatched domain (frontend vs backend) |
-| **15** | `10 Mobile Dev` | Swift iOS | **0.2017** | Mismatched domain (mobile vs backend) |
-| **16** | `16 Generic Software` | Vague corporate buzzwords | **0.1856** | Zero explicit skills, weak semantic relevance |
-| **17** | `17 Marketer` | SEO + social media | **0.0894** | Unrelated discipline, noise-floor zeroed |
-| **18** | `18 Pastry Chef` | Pastries & bakery | **0.0000** | Completely unrelated domain, score 0.0000 |
-
-### Key Ranking Properties Confirmed:
-1. **Required skills beat buzzwords**: `05 Full Stack` ($0.5583$) ranks far above `16 Generic Software` ($0.1856$).
-2. **Context beats keyword repetition**: `01 Excellent Backend` ($0.7029$) significantly beats `03 Stuffed Skills` ($0.5135$).
-3. **Paraphrase recognition**: `04 Paraphrased Backend` achieves $0.4616$ purely through semantic alignment despite $0.0000$ keyword score.
-4. **Fresher competitiveness**: `02 Fresher Strong Backend` ranks #2 ($0.5902$) despite a $0.10$ experience gap deduction.
-5. **Irrelevant filtering**: Unrelated candidates (`Pastry Chef`, `Marketer`) score $\le 0.0894$.
-
----
-
-## 7. Complete Test Suite & Verification Results
+## 6. Complete Test Suite & Verification Results
 
 Executed full pytest suite:
 ```bash
 python -m pytest -v tests
 ```
 
-**Results: 99 passed in 17.35s (100% pass rate)**
+**Results: 109 passed in 7.63s (100% pass rate)**
 
 ```
 tests/test_edge_cases.py (5 passed)
@@ -154,6 +84,7 @@ tests/test_jd_extractor.py (6 passed)
 tests/test_keyword_matcher.py (22 passed)
 tests/test_models_and_config.py (2 passed)
 tests/test_penalty_calculator.py (8 passed)
+tests/test_ranking_audit.py (10 passed)  <-- NEW PHASE 5 SUITE
 tests/test_resume_extractor.py (3 passed)
 tests/test_semantic_matcher.py (21 passed)
 tests/test_skill_normalizer.py (5 passed)
@@ -162,19 +93,21 @@ tests/test_text_cleaner.py (5 passed)
 
 ---
 
-## 8. Important Explicit Disclaimers
+## 7. Calibration Recommendation
 
-1. **Provisional Weights**: The default weights ($W_{\text{kw}} = 0.40$, $W_{\text{sem}} = 0.60$) and penalty parameters ($0.05$/yr, $0.20$ cap) are provisional engineering configurations.
-2. **Calibration Scope**: Semantic noise calibration ($\tau = 0.18$) is based on the local `all-MiniLM-L6-v2` model embedding behavior on technical text pairs.
-3. **Synthetic Fixture Note**: The 18-candidate evaluation fixture tests algorithmic invariants and relative ranking logic; it is not a substitute for large-scale empirical recruiting benchmark datasets.
+* **Retain provisional default**: Keyword Weight = `0.40`, Semantic Weight = `0.60`.
+* **Skill Split**: Required = `0.70`, Preferred = `0.30`.
+* **Noise Threshold**: $\tau = 0.18$ (attenuates non-technical text while preserving domain matches).
+* **Experience Penalty**: $0.05$/yr gap, clamped at $0.20$ maximum.
+* **UI Controls**: Expose presets (Default 40/60, Strict Compliance 60/40, Skills-First 25/75) with visual warnings when keyword weight $\ge 0.60$.
 
 ---
 
-## 9. Next Recommended Task
+## 8. Next Recommended Task
 
-- **Phase 5 — Recruiter UI & End-to-End Application**:
-  - Build Streamlit user interface (`app/ui/` or `app/main.py`).
-  - Implement dual PDF upload for 1 JD and 15–18 resumes.
-  - Render ranked candidate leaderboard with interactive score breakdowns (`keyword_score`, `semantic_score`, `penalties`, `final_score`).
-  - Provide expandable evidence drawers displaying matched skills, text snippets, and `ranking_reason`.
-  - Add configurable weight sliders allowing recruiters to adjust keyword vs. semantic emphasis dynamically.
+- **Phase 6 — Streamlit Recruiter Application**:
+  - Build interactive UI in `app/ui/` or `app/main.py`.
+  - Implement dual file upload: 1 Job Description PDF + 15–18 Resume PDFs.
+  - Interactive ranked leaderboard with live score diagnostics (`keyword_contribution`, `semantic_contribution`, `penalty`, `final_score`).
+  - Evidence drawers showing exact matched skills, sentence similarity evidence, and human-readable `ranking_reason`.
+  - Advanced configuration drawer with preset selector and sensitivity warning.

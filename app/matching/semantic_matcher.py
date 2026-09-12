@@ -77,6 +77,11 @@ class SemanticMatcher:
         return cls._model
 
     @classmethod
+    def get_embedding_model(cls, model_name: str = DEFAULT_EMBEDDING_MODEL) -> Any:
+        """Alias for get_model."""
+        return cls.get_model(model_name)
+
+    @classmethod
     def set_model(cls, model: Any) -> None:
         """Allows injecting a custom or mock model for testing purposes."""
         cls._model = model

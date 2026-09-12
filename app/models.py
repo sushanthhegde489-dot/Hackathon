@@ -202,6 +202,34 @@ class PenaltyBreakdown:
         }
 
 @dataclass
+class ScoreDiagnostics:
+    """Detailed machine-readable contribution diagnostics for hybrid ranking."""
+    keyword_score: float = 0.0
+    keyword_weight: float = 0.0
+    keyword_contribution: float = 0.0
+    semantic_score: float = 0.0
+    semantic_weight: float = 0.0
+    semantic_contribution: float = 0.0
+    base_score: float = 0.0
+    experience_penalty: float = 0.0
+    total_penalty: float = 0.0
+    final_score: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "keyword_score": round(self.keyword_score, 4),
+            "keyword_weight": round(self.keyword_weight, 4),
+            "keyword_contribution": round(self.keyword_contribution, 4),
+            "semantic_score": round(self.semantic_score, 4),
+            "semantic_weight": round(self.semantic_weight, 4),
+            "semantic_contribution": round(self.semantic_contribution, 4),
+            "base_score": round(self.base_score, 4),
+            "experience_penalty": round(self.experience_penalty, 4),
+            "total_penalty": round(self.total_penalty, 4),
+            "final_score": round(self.final_score, 4)
+        }
+
+@dataclass
 class CandidateResult:
     """
     Represents the complete matching, scoring, and ranking results for a candidate.
@@ -224,6 +252,7 @@ class CandidateResult:
     keyword_breakdown: KeywordScoreBreakdown = field(default_factory=KeywordScoreBreakdown)
     semantic_breakdown: SemanticScoreBreakdown = field(default_factory=SemanticScoreBreakdown)
     penalties: PenaltyBreakdown = field(default_factory=PenaltyBreakdown)
+    diagnostics: ScoreDiagnostics = field(default_factory=ScoreDiagnostics)
     final_score: float = 0.0
     ranking_reason: str = ""
 
@@ -272,7 +301,9 @@ class CandidateResult:
         return {
             "candidate_name": self.resume.candidate_name,
             "filename": self.resume.filename,
+            "base_score": round(self.diagnostics.base_score, 4),
             "final_score": round(self.final_score, 4),
+            "diagnostics": self.diagnostics.to_dict(),
             "keyword_score": self.keyword_breakdown.to_dict(),
             "semantic_score": self.semantic_breakdown.to_dict(),
             "penalties": self.penalties.to_dict(),
