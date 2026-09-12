@@ -35,9 +35,9 @@ class JDExtractor:
 
     # Section header regex patterns
     REQUIRED_SECTION_PATTERN = re.compile(
-        r"^(?:(?:minimum|basic|key|core|mandatory|role)\s+)?(?:requirements|qualifications|skills|requirements\s*&?\s*skills)\s*$|"
+        r"^(?:(?:required|minimum|basic|key|core|mandatory|role|technical)\s+)?(?:requirements|qualifications|skills|requirements\s*&?\s*skills)\s*$|"
         r"^what\s+(?:you['’]ll\s+need|you\s+need|we['’]re\s+looking\s+for)\s*$|"
-        r"^must\s+have[s]?\s*$|"
+        r"^(?:must\s+have[s]?|required)\s*$|"
         r"^eligibility(?:\s+criteria)?\s*$",
         re.IGNORECASE
     )
@@ -124,7 +124,7 @@ class JDExtractor:
                 continue
 
             # Header detection (usually short lines, < 50 chars, optionally ending with :)
-            header_candidate = stripped.rstrip(":")
+            header_candidate = re.sub(r"^[\s#*\-_]+|[\s#*:\-_]+$", "", stripped)
             if len(header_candidate) < 50:
                 if cls.PREFERRED_SECTION_PATTERN.match(header_candidate):
                     current_section = "preferred"

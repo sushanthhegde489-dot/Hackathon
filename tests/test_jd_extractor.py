@@ -113,3 +113,24 @@ class TestJDExtractor:
         assert "preferred_skills" in jd_dict
         assert "contextual_skills" in jd_dict
         assert "skill_evidences" in jd_dict
+
+    def test_bulleted_required_skills_header(self):
+        jd_text = """
+        Job Title: Software Engineering Intern
+        Required Skills:
+        - Python
+        - PostgreSQL
+        - Microservices
+        - CI/CD
+
+        Preferred Skills:
+        - AWS
+        - Docker
+        """
+        required, preferred, contextual, evidences = JDExtractor.extract_and_classify_skills(jd_text)
+        assert "python" in required
+        assert "postgresql" in required
+        assert "microservices" in required
+        assert "ci/cd" in required
+        assert "aws" in preferred
+        assert "docker" in preferred

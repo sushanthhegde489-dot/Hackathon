@@ -4,9 +4,15 @@ Recruiter Streamlit Application for End-to-End Hybrid Ranking & Explainability.
 """
 
 import io
+import sys
 import time
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
+
+# Ensure repository root is on sys.path so 'app', 'extraction', 'ingestion' packages are importable
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 import streamlit as st
 import pandas as pd
@@ -320,14 +326,14 @@ if current_jd:
         with col_jd2:
             st.markdown("**Required Skills:**")
             if current_jd.required_skills:
-                pills = "".join([f'<span class="skill-pill-req">{s}</span>' for s in current_jd.required_skills])
+                pills = " ".join([f'<span class="skill-pill-req">{s}</span>' for s in current_jd.required_skills])
                 st.markdown(pills, unsafe_allow_html=True)
             else:
                 st.write("None detected")
         with col_jd3:
             st.markdown("**Preferred Skills:**")
             if current_jd.preferred_skills:
-                pills = "".join([f'<span class="skill-pill-pref">{s}</span>' for s in current_jd.preferred_skills])
+                pills = " ".join([f'<span class="skill-pill-pref">{s}</span>' for s in current_jd.preferred_skills])
                 st.markdown(pills, unsafe_allow_html=True)
             else:
                 st.write("None detected")
@@ -455,19 +461,19 @@ if current_jd and raw_resume_items:
 
                     st.markdown("**Matched Required Skills:**")
                     if kw.matched_required_skills:
-                        pills = "".join([f'<span class="skill-pill-req">{s}</span>' for s in kw.matched_required_skills])
+                        pills = " ".join([f'<span class="skill-pill-req">{s}</span>' for s in kw.matched_required_skills])
                         st.markdown(pills, unsafe_allow_html=True)
                     else:
                         st.write("None")
 
                     if kw.missing_required_skills:
                         st.markdown("**Missing Required Skills:**")
-                        pills = "".join([f'<span class="skill-pill-miss">{s}</span>' for s in kw.missing_required_skills])
+                        pills = " ".join([f'<span class="skill-pill-miss">{s}</span>' for s in kw.missing_required_skills])
                         st.markdown(pills, unsafe_allow_html=True)
 
                     if kw.matched_preferred_skills:
                         st.markdown("**Preferred Skills:**")
-                        pills = "".join([f'<span class="skill-pill-pref">{s}</span>' for s in kw.matched_preferred_skills])
+                        pills = " ".join([f'<span class="skill-pill-pref">{s}</span>' for s in kw.matched_preferred_skills])
                         st.markdown(pills, unsafe_allow_html=True)
 
                     if sem.strongest_matches:
