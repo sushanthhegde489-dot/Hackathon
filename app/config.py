@@ -37,6 +37,27 @@ class RankingConfig:
     preferred_skill_weight: float = 0.30   # Priority within keyword score
     contextual_skill_weight: float = 0.00  # Contextual mentions carry zero or minimal direct score
     min_experience_penalty_factor: float = 0.05
+    experience_penalty_per_year: float = 0.05   # Penalty deducted per year of experience gap
+    maximum_experience_penalty: float = 0.20    # Maximum cap on experience penalty
+    semantic_noise_threshold: float = 0.18      # Calibrated noise threshold for semantic matching
+
+    def validate(self) -> None:
+        """Validates configuration bounds and invariants."""
+        if self.keyword_weight < 0.0:
+            raise ValueError(f"keyword_weight must be non-negative, got {self.keyword_weight}")
+        if self.semantic_weight < 0.0:
+            raise ValueError(f"semantic_weight must be non-negative, got {self.semantic_weight}")
+        if abs((self.keyword_weight + self.semantic_weight) - 1.0) > 1e-6:
+            raise ValueError(
+                f"keyword_weight ({self.keyword_weight}) + semantic_weight ({self.semantic_weight}) "
+                f"must sum to 1.0, got {self.keyword_weight + self.semantic_weight:.6f}"
+            )
+        if self.required_skill_weight < 0.0 or self.preferred_skill_weight < 0.0:
+            raise ValueError("Skill weights must be non-negative")
+        if self.experience_penalty_per_year < 0.0:
+            raise ValueError(f"experience_penalty_per_year must be non-negative, got {self.experience_penalty_per_year}")
+        if self.maximum_experience_penalty < 0.0:
+            raise ValueError(f"maximum_experience_penalty must be non-negative, got {self.maximum_experience_penalty}")
 
 # Provisional default instance
 DEFAULT_RANKING_CONFIG = RankingConfig()
