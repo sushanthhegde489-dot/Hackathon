@@ -281,6 +281,14 @@ class JDExtractor:
         exp_required = cls.extract_required_experience(raw_text)
         sections = cls.segment_sections(raw_text)
 
+        responsibilities = []
+        for line in raw_text.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith(("-", "*", "•")):
+                cleaned_line = stripped.lstrip("-*• ").strip()
+                if any(cleaned_line.lower().startswith(verb) for verb in ["build", "design", "develop", "architect", "collaborate", "lead", "write", "maintain", "optimize", "create", "implement", "work"]):
+                    responsibilities.append(cleaned_line)
+
         return JobDescription(
             filename=filename,
             raw_text=raw_text,
@@ -289,6 +297,7 @@ class JDExtractor:
             required_skills=required,
             preferred_skills=preferred,
             contextual_skills=contextual,
+            responsibilities=responsibilities,
             skill_evidences=evidences,
             experience_years_required=exp_required,
             sections=sections

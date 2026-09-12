@@ -40,7 +40,7 @@ class TestAppHelpers:
         warn_active, msg = check_keyword_stuffing_warning(0.60)
         assert warn_active is True
         assert "Adversarial Risk Warning" in msg
-        assert "Phase 5" in msg
+        assert "0.60" in msg
 
         warn_active_high, _ = check_keyword_stuffing_warning(0.75)
         assert warn_active_high is True

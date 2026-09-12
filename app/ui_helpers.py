@@ -66,16 +66,14 @@ KEYWORD_STUFFING_THRESHOLD = 0.60
 
 def check_keyword_stuffing_warning(keyword_weight: float) -> Tuple[bool, str]:
     """
-    Checks if keyword weight is in the adversarial danger zone (>= 0.60).
-    Based on Phase 5 calibration where an unqualified candidate with stuffed keywords
-    leapt to #2 overall under W_kw >= 0.60.
+    Returns a warning if keyword weight is >= 0.60.
+    At this threshold, adversarial keyword stuffing can leapfrog qualified candidates.
     """
     if keyword_weight >= KEYWORD_STUFFING_THRESHOLD:
         warning_msg = (
             f"⚠️ **Adversarial Risk Warning**: Keyword weight is set to {keyword_weight:.2f} (≥ 0.60). "
-            "In our Phase 5 adversarial audit, keyword weights at or above 0.60 allowed unqualified "
-            "candidates with stuffed keyword lists (e.g. retail cashiers) to leapfrog legitimate software engineers "
-            "into Rank #2. We strongly recommend keeping Keyword Weight ≤ 0.50 for balanced ranking."
+            "At this threshold, candidates who pad their resumes with keyword lists can rank above more "
+            "qualified engineers. We recommend keeping Keyword Weight ≤ 0.50 for balanced ranking."
         )
         return True, warning_msg
     return False, ""
@@ -277,7 +275,9 @@ def generate_leaderboard_csv(results: List[CandidateResult]) -> str:
         "Final Score (%)",
         "Base Score (%)",
         "Keyword Score (%)",
+        "Keyword Contribution (%)",
         "Semantic Score (%)",
+        "Semantic Contribution (%)",
         "Experience (Yrs)",
         "Penalty (%)",
         "Matched Required Skills",
@@ -295,7 +295,9 @@ def generate_leaderboard_csv(results: List[CandidateResult]) -> str:
             format_percentage(res.final_score),
             format_percentage(res.diagnostics.base_score),
             format_percentage(res.keyword_score),
+            format_percentage(res.diagnostics.keyword_contribution),
             format_percentage(res.semantic_score),
+            format_percentage(res.diagnostics.semantic_contribution),
             f"{res.resume.experience_years:.1f}",
             format_percentage(res.penalties.total_penalty),
             ", ".join(kw.matched_required_skills),

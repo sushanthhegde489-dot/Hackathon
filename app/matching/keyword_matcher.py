@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict, Any, Optional, Set, Tuple
+from typing import List, Dict, Any, Optional, Tuple
 from app.config import RankingConfig, DEFAULT_RANKING_CONFIG
 from app.models import (
     JobDescription, Resume, CandidateResult, KeywordScoreBreakdown,

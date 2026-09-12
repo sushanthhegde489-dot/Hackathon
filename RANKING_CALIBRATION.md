@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-Phase 5 stress-tested, audited, and calibrated the hybrid ranking architecture prior to building the Streamlit UI. The system combines:
+We stress-tested, audited, and calibrated the hybrid ranking architecture prior to building the Streamlit UI. The system combines:
 1. **Explicit Keyword Matching** (`KeywordMatcher`): Multi-tier required/preferred skill matching with canonical normalization and false-positive guards.
 2. **Dense Semantic Matching** (`SemanticMatcher`): Section-aware cosine similarity using `all-MiniLM-L6-v2` with noise threshold attenuation.
 3. **Experience Penalty** (`PenaltyCalculator`): Bounded, linear deduction per year of experience gap with protection against disproportionate penalties for freshers.

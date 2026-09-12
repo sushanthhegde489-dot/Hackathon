@@ -148,6 +148,7 @@ class HybridRanker:
             penalties=penalties,
             diagnostics=diagnostics,
             final_score=final_score,
+            rank=1,
             ranking_reason=""
         )
 
@@ -224,4 +225,6 @@ class HybridRanker:
 
         # 3. Deterministic descending sort: primary by final_score, secondary by filename, tertiary by candidate_name
         results.sort(key=lambda r: (-r.final_score, r.resume.filename, r.resume.candidate_name))
+        for idx, r in enumerate(results, 1):
+            r.rank = idx
         return results

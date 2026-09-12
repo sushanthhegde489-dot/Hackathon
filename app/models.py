@@ -34,6 +34,7 @@ class JobDescription:
     required_skills: List[str] = field(default_factory=list)
     preferred_skills: List[str] = field(default_factory=list)
     contextual_skills: List[str] = field(default_factory=list)
+    responsibilities: List[str] = field(default_factory=list)
     skill_evidences: Dict[str, SkillEvidence] = field(default_factory=dict)
     experience_years_required: float = 0.0
     sections: Dict[str, str] = field(default_factory=dict)
@@ -51,6 +52,7 @@ class JobDescription:
             "required_skills": self.required_skills,
             "preferred_skills": self.preferred_skills,
             "contextual_skills": self.contextual_skills,
+            "responsibilities": self.responsibilities,
             "skill_evidences": {k: v.to_dict() for k, v in self.skill_evidences.items()},
             "experience_years_required": self.experience_years_required,
             "sections": list(self.sections.keys()),
@@ -254,6 +256,7 @@ class CandidateResult:
     penalties: PenaltyBreakdown = field(default_factory=PenaltyBreakdown)
     diagnostics: ScoreDiagnostics = field(default_factory=ScoreDiagnostics)
     final_score: float = 0.0
+    rank: int = 0
     ranking_reason: str = ""
 
     # Backwards compatibility properties
@@ -299,6 +302,7 @@ class CandidateResult:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "rank": self.rank,
             "candidate_name": self.resume.candidate_name,
             "filename": self.resume.filename,
             "base_score": round(self.diagnostics.base_score, 4),
